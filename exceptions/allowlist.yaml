@@ -1,0 +1,18 @@
+# ==========================================================
+# Approved CVE exceptions / allowlist
+# (wired into the scanner from Sprint 5 onward)
+#
+# Each entry suppresses a specific CVE from the reports, with a
+# documented reason and an expiry date so exceptions don't live forever.
+# ==========================================================
+
+exceptions: []
+
+# Example:
+# exceptions:
+#   - id: CVE-2023-12345
+#     reason: "No fix available upstream; not reachable in our usage"
+#     expires: 2026-12-31
+#   - id: CVE-2024-99999
+#     reason: "False positive — package not actually installed"
+#     expires: 2026-09-30
