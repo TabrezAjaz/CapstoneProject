@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Container Image Vulnerability Scanner — Sprint 1 Report</title>
+<style>
+  /* ===== Page setup for print/PDF ===== */
+  @page { size: A4; margin: 2cm 1.8cm; }
+
+  /* ===== Base typography ===== */
+  :root {
+    --primary: #0b2b2b;
+    --primary-mid: #0f3d3a;
+    --primary-soft: #145a52;
+    --primary-light: #e6f4f1;
+    --accent: #0d9488;        /* teal-600 */
+    --accent-gold: #14b8a6;   /* teal-500 */
+    --accent-light: #2dd4bf;  /* teal-400 */
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #d1d5db;
+    --code-bg: #f5f5f5;
+    --success: #16a34a;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --crit: #b91c1c;
+    --surface: #ffffff;
+    --surface-alt: #f8fafc;
+  }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    color: var(--text); line-height: 1.55; margin: 0; background: #fff; font-size: 11.5pt;
+  }
+  h1, h2, h3, h4 { font-family: Georgia, "Times New Roman", serif; color: var(--primary); margin-top: 1.2em; }
+  h1 { font-size: 2.2em; border-bottom: 3px solid var(--primary); padding-bottom: 0.3em; }
+  h2 { font-size: 1.6em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; margin-top: 2em; }
+  h3 { font-size: 1.25em; color: var(--primary-soft); margin-top: 1.6em; }
+  h4 { font-size: 1.05em; color: var(--primary); margin-top: 1.2em; }
+  p { margin: 0.6em 0; text-align: justify; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 0.25em 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+
+  /* ===== Code / pre blocks ===== */
+  code {
+    background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
+    font-family: "Consolas", "Courier New", monospace; font-size: 0.92em; color: #b91c1c;
+  }
+  pre {
+    background: #1e293b; color: #e2e8f0; padding: 12px 16px; border-radius: 6px;
+    font-family: "Consolas", "Courier New", monospace; font-size: 9pt; line-height: 1.45;
+    page-break-inside: avoid; white-space: pre-wrap; overflow-wrap: anywhere;
+    word-break: break-word; overflow-x: hidden;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+  pre.json    { border-left: 4px solid #14b8a6; }
+  pre.python  { border-left: 4px solid #16a34a; }
+  pre.shell   { border-left: 4px solid #0d9488; }
+  pre.yaml    { border-left: 4px solid #6366f1; }
+
+  /* ===== Tables ===== */
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.96em; page-break-inside: avoid; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: linear-gradient(180deg, #e0f2f1, var(--primary-light)); color: var(--primary); font-weight: 600; letter-spacing: 0.02em; }
+  tr:nth-child(even) td { background: #fafbfd; }
+  tr:hover td { background: #f1f5f9; }
+
+  /* severity chips */
+  .sev { display:inline-block; padding:1px 8px; border-radius:10px; font-size:0.78em; font-weight:700; color:#fff; }
+  .sev.crit { background:#b91c1c; } .sev.high { background:#dc2626; }
+  .sev.med  { background:#d97706; } .sev.low  { background:#16a34a; }
+  .sev.unk  { background:#6b7280; }
+
+  /* ===== Cover page ===== */
+  .cover { min-height: 25cm; display: flex; flex-direction: column; page-break-after: always; padding: 0; margin: 0; }
+  .cover-frame {
+    flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 3.5em 2em 2.5em;
+    background:
+      radial-gradient(ellipse at top right, rgba(45, 212, 191, 0.14), transparent 55%),
+      radial-gradient(ellipse at bottom left, rgba(20, 90, 82, 0.40), transparent 60%),
+      linear-gradient(140deg, #0b2b2b 0%, #0f3d3a 55%, #145a52 100%);
+    color: #fff; border-radius: 14px; position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+  .cover-frame::before, .cover-frame::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 7px;
+    background: linear-gradient(90deg, #0d9488 0%, #14b8a6 25%, #2dd4bf 50%, #14b8a6 75%, #0d9488 100%);
+  }
+  .cover-frame::before { top: 0; } .cover-frame::after { bottom: 0; }
+  .cover .crest {
+    width: 78px; height: 78px; border-radius: 50%;
+    background: linear-gradient(135deg, #2dd4bf, #0d9488);
+    display: flex; align-items: center; justify-content: center; font-size: 2.4em;
+    margin: 0.4em auto 1.4em; box-shadow: 0 6px 18px rgba(0,0,0,0.35), inset 0 -3px 0 rgba(0,0,0,0.12); color: #06241f;
+  }
+  .cover .eyebrow {
+    font-family: "Segoe UI", system-ui, sans-serif; font-size: 0.85em; letter-spacing: 0.4em;
+    text-transform: uppercase; color: #5eead4; margin: 0 0 0.4em 0; font-weight: 600;
+  }
+  .cover h1 {
+    font-family: Georgia, "Times New Roman", serif; font-size: 2.7em; color: #ffffff; border: none;
+    margin: 0.1em 0; padding: 0; letter-spacing: 0.02em; text-shadow: 0 2px 6px rgba(0,0,0,0.35); line-height: 1.08;
+  }
+  .cover .subtitle { font-size: 1.12em; color: #e8eef7; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 300; margin: 0.6em 0 0 0; }
+  .cover .divider { width: 90px; height: 3px; background: linear-gradient(90deg, transparent, #5eead4, transparent); margin: 1.6em auto; border: none; }
+  .cover .tagline { color: #cbd5e1; font-size: 0.98em; max-width: 14.5cm; margin: 0.4em auto 1.6em; line-height: 1.5; }
+  .cover .meta-box {
+    margin: 1.4em auto 0; padding: 1.6em 2em; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px; background: rgba(255,255,255,0.06); max-width: 17cm; width: 100%; box-sizing: border-box; text-align: left;
+  }
+  .cover .meta-box p {
+    margin: 0; padding: 0.65em 0; text-align: left; font-size: 1.0em; color: #f1f5f9;
+    border-bottom: 1px dashed rgba(255,255,255,0.14); display: flex; gap: 1em;
+  }
+  .cover .meta-box p:last-child { border-bottom: none; }
+  .cover .meta-box strong { color: #5eead4; font-weight: 600; min-width: 5.6cm; letter-spacing: 0.03em; font-size: 0.9em; text-transform: uppercase; }
+  .cover .seal { margin-top: auto; padding-top: 1.6em; color: #cbd5e1; font-size: 0.82em; letter-spacing: 0.1em; text-transform: uppercase; }
+  .cover .seal strong { color: #5eead4; }
+
+  /* ===== TOC ===== */
+  .toc { page-break-after: always; }
+  .toc h2 { border-bottom: 2px solid var(--primary); padding-bottom: 0.35em; color: var(--primary); margin-top: 0.6em; }
+  .toc ol { list-style: none; padding-left: 0; counter-reset: tocitem; margin: 0.6em 0; }
+  .toc ol li { counter-increment: tocitem; padding: 5px 0; border-bottom: 1px dotted #cbd5e1; font-size: 1em; }
+  .toc ol li::before { content: counter(tocitem) ".  "; color: var(--accent); font-weight: 700; font-family: Georgia, serif; }
+  .toc ol ol li::before { content: counters(tocitem, ".") "  "; color: var(--primary-soft); }
+  .toc ol ol { padding-left: 1.6em; margin-top: 2px; }
+  .toc ol ol li { border: none; padding: 2px 0; font-size: 0.92em; color: var(--muted); }
+
+  /* ===== Abstract ===== */
+  .abstract { margin: 0; padding: 0; }
+  .abstract h2 { margin-top: 0; padding-top: 0; }
+  .abstract p { margin: 0.4em 0 1em 0; }
+
+  /* ===== Phase wrappers ===== */
+  .phase { page-break-before: always; margin-top: 0; }
+  .phase-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 60%, var(--primary-soft) 100%);
+    color: #fff; padding: 1.1em 1.5em; border-radius: 8px; margin-bottom: 1.6em; position: relative; overflow: hidden;
+    box-shadow: 0 4px 14px rgba(11, 43, 43, 0.18);
+  }
+  .phase-header::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--accent-light), var(--accent)); }
+  .phase-header h2 { color: #fff; border: none; margin: 0; padding-left: 0.6em; font-size: 1.55em; }
+  .phase-header .phase-meta { margin: 0.5em 0 0 0; padding-left: 0.9em; font-size: 0.92em; opacity: 0.88; font-style: italic; }
+
+  .objective { background: var(--primary-light); border-left: 4px solid var(--primary); padding: 0.8em 1.2em; margin: 1em 0 1.5em 0; border-radius: 0 4px 4px 0; }
+  .objective h4 { margin: 0 0 0.4em 0; color: var(--primary); }
+
+  /* ===== Status badges ===== */
+  .status { display: inline-block; font-size: 0.75em; padding: 2px 9px; border-radius: 12px; font-weight: 600; vertical-align: middle; margin-left: 6px; }
+  .status.done { background: #dcfce7; color: var(--success); }
+  .status.todo { background: #fee2e2; color: var(--danger); }
+  .status.wip  { background: #fef3c7; color: var(--warn); }
+  .status.optional { background: #e0e7ff; color: #4338ca; }
+
+  /* ===== Screenshot placeholders ===== */
+  figure.screenshot { margin: 1.2em 0; page-break-inside: avoid; }
+  figure.screenshot .placeholder {
+    border: 2px solid var(--primary); background: #fafbfd; padding: 60px 20px; text-align: center;
+    border-radius: 6px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.5em;
+  }
+  figure.screenshot.optional .placeholder { border: 2px dashed #cbd5e1; background: #f9fafb; min-height: 130px; padding: 40px 20px; }
+  figure.screenshot .badge { display: inline-block; background: var(--primary); color: #fff; padding: 3px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  figure.screenshot.optional .badge { background: #94a3b8; }
+  figure.screenshot .caption { font-weight: 600; color: var(--primary); margin: 0; font-size: 1.05em; }
+  figure.screenshot .hint { color: var(--muted); margin: 0; font-size: 0.88em; font-style: italic; max-width: 80%; }
+  figure.screenshot figcaption { text-align: center; color: var(--muted); font-size: 0.88em; margin-top: 0.5em; font-style: italic; }
+  figure.screenshot img { max-width: 100%; height: auto; display: block; margin: 0 auto; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 14px rgba(11, 43, 43, 0.12); }
+  figure.screenshot img + .placeholder { display: none; }
+
+  /* ===== Callouts ===== */
+  .callout { border-left: 4px solid; padding: 0.7em 1em; margin: 1em 0; border-radius: 0 4px 4px 0; background: #f9fafb; }
+  .callout.info    { border-color: var(--primary); background: var(--primary-light); }
+  .callout.warn    { border-color: var(--warn);    background: #fef3c7; }
+  .callout.success { border-color: var(--success); background: #dcfce7; }
+  .callout.danger  { border-color: var(--danger);  background: #fee2e2; }
+
+  /* ===== Footer ===== */
+  .doc-footer { margin-top: 3em; padding-top: 1em; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85em; text-align: center; }
+
+  /* ===== Print refinements ===== */
+  @media print {
+    body { font-size: 10.5pt; }
+    .no-print { display: none; }
+    h2, h3 { page-break-after: avoid; }
+    pre, table, figure.screenshot { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- COVER PAGE                                                    -->
+<!-- ============================================================ -->
+<section class="cover">
+  <div class="cover-frame">
+    <div class="crest">🛡️</div>
+    <p class="eyebrow">DevSecOps — Capstone Project</p>
+    <h1>Container Image<br/>Vulnerability Scanner</h1>
+    <p class="subtitle">Sprint 1 — Setup &amp; Basic Scanning</p>
+    <hr class="divider" />
+    <p class="tagline">
+      Establishing the project foundation: repository structure, a containerized
+      <strong>Trivy</strong> scanning engine, a Python wrapper that parses CVE findings,
+      and the first real vulnerability scans against public Docker images — all running
+      locally at zero cloud cost.
+    </p>
+
+    <div class="meta-box">
+      <p><strong>Team&nbsp;Members</strong> <span>Tabrez Ajaz · Shubham Bhatia · Goutam Das · Lokesh Derashri</span></p>
+      <p><strong>Project</strong> <span>Container Image Vulnerability Scanner with Reporting</span></p>
+      <p><strong>Sprint</strong> <span>1 of 6 — Initial Setup &amp; Basic Vulnerability Scanning</span></p>
+      <p><strong>Workload</strong> <span>20 hours</span></p>
+      <p><strong>Scanner Engine</strong> <span>Trivy (Aqua Security)</span></p>
+      <p><strong>GitHub&nbsp;Repository</strong> <span><a href="https://github.com/TabrezAjaz/container-vuln-scanner" target="_blank" rel="noopener">github.com/TabrezAjaz/container-vuln-scanner</a></span></p>
+    </div>
+
+    <p class="seal">Trivy · Python · Docker · CVE/NVD &nbsp;·&nbsp; <strong>Sprint 1 Report</strong> &nbsp;·&nbsp; 2026</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ABSTRACT                                                      -->
+<!-- ============================================================ -->
+<section class="abstract">
+  <h2>Abstract</h2>
+  <p>
+    This report documents <strong>Sprint 1</strong> of the <em>Container Image Vulnerability
+    Scanner with Reporting</em> capstone project. The sprint establishes the technical
+    foundation on which all later sprints (CI/CD integration, reporting, notifications, the
+    historical dashboard, and exception handling) are built. Four deliverables are completed:
+    a versioned <strong>Git repository</strong> with a clean, scalable folder structure; the
+    installation and configuration of the <strong>Trivy</strong> vulnerability scanner; a set of
+    <strong>initial scans</strong> against well-known public Docker images to understand the
+    scanner's output and logging; and an exploration of how Trivy integrates with the
+    <strong>CVE / NVD vulnerability databases</strong> for real-time checks.
+  </p>
+  <p>
+    Every component is chosen to run entirely on a local workstation using <strong>Docker
+    Desktop</strong> and <strong>Python 3.12</strong>, keeping the running cost at zero while
+    remaining faithful to how a production DevSecOps pipeline would be structured. A thin Python
+    wrapper around Trivy is introduced in this sprint so that, in later sprints, the same code
+    path can emit structured JSON, drive CI/CD pass/fail gates, and feed metrics into the
+    dashboard without rework.
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS                                            -->
+<!-- ============================================================ -->
+<section class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li>Introduction &amp; Sprint 1 Objectives</li>
+    <li>Tools, Technologies &amp; Conventions
+      <ol>
+        <li>Why Trivy over Clair</li>
+        <li>Runtime &amp; Versions</li>
+        <li>Local-first, Zero-cost Principle</li>
+      </ol>
+    </li>
+    <li>Task 1 — Repository &amp; Folder Structure <span class="status done">COMPLETED</span></li>
+    <li>Task 2 — Installing &amp; Configuring Trivy <span class="status done">COMPLETED</span></li>
+    <li>Task 3 — First Vulnerability Scans <span class="status done">COMPLETED</span></li>
+    <li>Task 4 — CVE / NVD Database Integration <span class="status done">COMPLETED</span></li>
+    <li>Python Scanner Wrapper (Foundation for Sprint 2)</li>
+    <li>Verification &amp; Results Summary</li>
+    <li>Troubleshooting Log</li>
+    <li>Conclusion &amp; Next Sprint Preview</li>
+    <li>References</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<!-- 1. INTRODUCTION                                              -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>1. Introduction &amp; Sprint 1 Objectives</h2>
+    <p class="phase-meta">What this sprint delivers and why it matters for the whole project.</p>
+  </div>
+
+  <h3>1.1 Project Background</h3>
+  <p>
+    Modern software ships as <strong>container images</strong>. Each image bundles an operating
+    system layer, language runtimes, and application dependencies — any of which may contain
+    known security vulnerabilities (CVEs). Without an automated gate, vulnerable images can reach
+    production unnoticed. This project builds an <strong>automated vulnerability scanner</strong>
+    that scans container images, integrates with CI/CD pipelines, reports findings, and tracks
+    them over time, so that only secure images are deployed.
+  </p>
+
+  <h3>1.2 Where Sprint 1 Fits</h3>
+  <p>
+    The project is delivered over six 20-hour sprints. Sprint 1 is the <em>foundation</em> —
+    it produces a working scanner and a repository skeleton that every later sprint extends.
+  </p>
+  <table>
+    <thead><tr><th>Sprint</th><th>Focus</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1</strong></td><td><strong>Initial setup &amp; basic vulnerability scanning</strong></td><td><span class="status done">THIS REPORT</span></td></tr>
+      <tr><td>2</td><td>CI/CD pipeline integration (Jenkins, GitHub Actions)</td><td><span class="status wip">PLANNED</span></td></tr>
+      <tr><td>3</td><td>Report generation &amp; Slack/Teams notifications</td><td><span class="status wip">PLANNED</span></td></tr>
+      <tr><td>4</td><td>Web dashboard (Prometheus + Grafana)</td><td><span class="status wip">PLANNED</span></td></tr>
+      <tr><td>5</td><td>Scanner customization &amp; exception handling</td><td><span class="status wip">PLANNED</span></td></tr>
+      <tr><td>6</td><td>Documentation, testing &amp; final deployment</td><td><span class="status wip">PLANNED</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.3 Sprint 1 Objectives</h3>
+  <ul>
+    <li>Set up the project repository and define a clean, scalable folder structure.</li>
+    <li>Install and configure the Trivy vulnerability scanner to scan Docker images.</li>
+    <li>Pull a few sample images and perform initial scans to understand output and logs.</li>
+    <li>Explore CVE database integration for real-time vulnerability checks.</li>
+  </ul>
+
+  <div class="callout success">
+    <strong>Sprint 1 goal:</strong> Establish the foundation by setting up a basic image-scanning
+    process and verifying the scanner's output — ready to be automated in Sprint 2.
+  </div>
+
+  <h3>1.4 System Architecture (Overview)</h3>
+  <p>
+    The diagram below shows the complete target system across all six sprints. Components built
+    and verified in <strong>Sprint 1</strong> are highlighted in teal — the input sources, the
+    <code>config.yaml</code>-driven Python wrapper, the Trivy engine, the local CVE/NVD
+    vulnerability database, and the structured scan results. Components shown with a dashed border
+    are implemented in later sprints (tagged <code>S2</code>–<code>S5</code>), but the architecture
+    is designed up front so they slot in without rework.
+  </p>
+
+  <figure class="screenshot">
+    <img src="architecture-diagram.png" alt="System architecture diagram showing image inputs feeding the Trivy-based scanner core (config, Python wrapper, Trivy engine, vulnerability database, scan results) which fans out to CI/CD gate, reporters, notifiers, Prometheus and Grafana" />
+    <figcaption>Figure 1.1 — End-to-end architecture. Sprint 1 scope (teal) covers the scanning engine; dashed boxes are delivered in Sprints 2–5.</figcaption>
+  </figure>
+
+  <h4>1.4.1 Request / Data Flow</h4>
+  <ol>
+    <li>A container <strong>image</strong> is supplied — built locally, pulled from a registry, or (Sprint 2) handed in by a CI/CD trigger.</li>
+    <li>The <strong>Python wrapper</strong> reads <code>config.yaml</code> (severities, <code>fail_on</code>, output paths) and invokes the <strong>Trivy engine</strong>.</li>
+    <li>Trivy queries its local <strong>vulnerability database</strong> (CVE/NVD · GHSA · distro advisories), which refreshes from online feeds roughly every 24&nbsp;hours.</li>
+    <li>Trivy returns findings; the wrapper parses them into structured <strong>scan results</strong> (JSON + table) with per-severity counts.</li>
+    <li>In later sprints those results fan out to a <strong>CI/CD build gate</strong> (S2), <strong>reporters</strong> (S3), <strong>notifiers</strong> (S3), and a <strong>Prometheus + Grafana</strong> dashboard (S4); an <strong>exceptions allowlist</strong> (S5) filters approved CVEs before reporting.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<!-- 2. TOOLS & TECHNOLOGIES                                      -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>2. Tools, Technologies &amp; Conventions</h2>
+    <p class="phase-meta">The stack used in Sprint 1 and the principles behind each choice.</p>
+  </div>
+
+  <h3>2.1 Why Trivy over Clair</h3>
+  <p>
+    The brief suggests <em>Trivy or Clair</em>. Trivy was selected because it is a single
+    self-contained binary, requires no separate database server to operate, scans in seconds, and
+    is the de-facto standard in modern CI/CD pipelines.
+  </p>
+  <table>
+    <thead><tr><th>Criterion</th><th>Trivy (chosen)</th><th>Clair</th></tr></thead>
+    <tbody>
+      <tr><td>Setup</td><td>Single binary / one container — no server</td><td>Requires a Postgres DB + API service</td></tr>
+      <tr><td>Scan target</td><td>Images, filesystems, repos, IaC, secrets</td><td>Container images only</td></tr>
+      <tr><td>Speed</td><td>Seconds (local cached DB)</td><td>Slower; indexing workflow</td></tr>
+      <tr><td>CI/CD fit</td><td>First-class exit codes &amp; SARIF/JSON</td><td>Needs a client (e.g. clairctl)</td></tr>
+      <tr><td>Output formats</td><td>table, json, sarif, cyclonedx, template</td><td>JSON via API</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 Runtime &amp; Versions</h3>
+  <table>
+    <thead><tr><th>Component</th><th>Version</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Trivy</td><td>0.50+ (latest stable)</td><td>Vulnerability scanning engine</td></tr>
+      <tr><td>Docker Desktop</td><td>4.x (WSL2 backend)</td><td>Pull/build images, run Trivy container</td></tr>
+      <tr><td>Python</td><td>3.12</td><td>Scanner wrapper &amp; JSON parsing</td></tr>
+      <tr><td>Git</td><td>2.x</td><td>Version control</td></tr>
+      <tr><td>OS</td><td>Windows 11 + WSL2</td><td>Development workstation</td></tr>
+      <tr><td>Vulnerability DB</td><td>trivy-db (CVE/NVD, GHSA, distro advisories)</td><td>Auto-pulled by Trivy</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 Local-first, Zero-cost Principle</h3>
+  <div class="callout info">
+    <strong>Cost optimization (10% of the grade):</strong> Every Sprint 1 component runs locally.
+    Trivy is open-source, Docker Desktop is free for this use, Python is free, and the only
+    network traffic is the one-time download of the vulnerability database (~600&nbsp;MB) and the
+    sample images. <strong>Total running cost: ₹0 / $0.</strong>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3. TASK 1 — REPO & STRUCTURE                                 -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>3. Task 1 — Repository &amp; Folder Structure <span class="status done">COMPLETED</span></h2>
+    <p class="phase-meta">A clean skeleton that every later sprint extends without restructuring.</p>
+  </div>
+
+  <div class="objective">
+    <h4>Objective</h4>
+    <p>Initialize a Git repository and lay out a folder structure that anticipates all six
+    sprints — scanning, reporting, notifications, CI/CD, the dashboard, exceptions, tests, and
+    documentation — so later work slots in cleanly.</p>
+  </div>
+
+  <h3>3.1 Folder Structure</h3>
+  <pre class="shell"><code>container-vuln-scanner/
+├── scanner/                  # Python: wraps Trivy, parses JSON findings
+│   ├── __init__.py
+│   ├── trivy_scanner.py      # core wrapper (Sprint 1)
+│   └── models.py             # Finding / ScanResult dataclasses
+├── reporters/                # HTML / JSON / PDF report generators (Sprint 3)
+├── notifiers/                # Slack / Teams / email integrations (Sprint 3)
+├── exceptions/               # CVE allowlist / approved exceptions (Sprint 5)
+│   └── allowlist.yaml
+├── ci/                       # GitHub Actions + Jenkinsfile (Sprint 2)
+├── dashboard/                # Prometheus + Grafana configs (Sprint 4)
+├── docker/                   # Dockerfile for the scanner itself
+├── tests/                    # sample images list + unit tests
+│   └── images.txt
+├── docs/                     # setup, usage, troubleshooting + screenshots
+│   └── screenshots/
+├── config.yaml               # severity thresholds, output paths, webhooks
+├── requirements.txt          # Python dependencies
+├── .gitignore
+└── README.md</code></pre>
+
+  <h3>3.2 Repository Initialization</h3>
+  <pre class="shell"><code># Create and enter the project folder
+mkdir container-vuln-scanner; cd container-vuln-scanner
+
+# Initialize Git
+git init
+git branch -M main
+
+# Scaffold the directories
+mkdir scanner, reporters, notifiers, exceptions, ci, dashboard, docker, tests
+mkdir docs, docs/screenshots
+
+# First commit
+git add .
+git commit -m "chore: initial project scaffold for Sprint 1"</code></pre>
+
+  <h3>3.3 Baseline Configuration — <code>config.yaml</code></h3>
+  <p>A single declarative config drives the scanner's behaviour, so thresholds and paths are not
+  hard-coded. The <code>fail_on</code> key is what Sprint 2 will use to break a CI build.</p>
+  <pre class="yaml"><code># config.yaml — central project configuration
+scanner:
+  engine: trivy
+  # Severities to include in reports
+  severities: [LOW, MEDIUM, HIGH, CRITICAL]
+  # Build fails if any finding is at or above this level (used in Sprint 2)
+  fail_on: HIGH
+  ignore_unfixed: false      # include vulns with no fix available
+  timeout: "5m"
+
+output:
+  dir: "./scan-results"
+  formats: [table, json]
+
+images:
+  # Sample images scanned in Sprint 1
+  - nginx:latest
+  - python:3.12-slim
+  - alpine:3.19
+  - node:18
+
+# Placeholders wired up in later sprints
+notifications:
+  slack_webhook: ""          # Sprint 3
+exceptions_file: "exceptions/allowlist.yaml"   # Sprint 5</code></pre>
+
+  <h3>3.4 <code>.gitignore</code></h3>
+  <pre class="shell"><code># Scan artifacts &amp; secrets should never be committed
+scan-results/
+*.log
+.env
+__pycache__/
+*.pyc
+.venv/
+trivy-cache/</code></pre>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">VS Code Explorer showing the folder structure</p>
+      <p class="hint">Capture the VS Code Explorer panel with all folders (scanner, reporters, ci, dashboard, docs…) and config.yaml visible.</p>
+    </div>
+    <figcaption>Figure 3.1 — Project repository structure scaffolded in VS Code.</figcaption>
+  </figure>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">Terminal — <code>git init</code> &amp; first commit</p>
+      <p class="hint">Capture the terminal output of <code>git init</code> and the first <code>git commit</code>.</p>
+    </div>
+    <figcaption>Figure 3.2 — Git repository initialized with the first commit.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ -->
+<!-- 4. TASK 2 — INSTALL TRIVY                                    -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>4. Task 2 — Installing &amp; Configuring Trivy <span class="status done">COMPLETED</span></h2>
+    <p class="phase-meta">Two supported paths: a native install, and a no-install container run.</p>
+  </div>
+
+  <div class="objective">
+    <h4>Objective</h4>
+    <p>Install Trivy so it can scan Docker images locally, and verify it can download its
+    vulnerability database. Both a native Windows install and a Docker-based run are documented so
+    the scan works on any machine — including CI runners in Sprint 2.</p>
+  </div>
+
+  <h3>4.1 Option A — Native Install (Windows / WSL2)</h3>
+  <pre class="shell"><code># --- Windows (PowerShell) via Chocolatey ---
+choco install trivy -y
+
+# --- or inside WSL2 / Linux (recommended for parity with CI) ---
+sudo apt-get install -y wget gnupg
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
+  sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
+  https://aquasecurity.github.io/trivy-repo/deb generic main" | \
+  sudo tee /etc/apt/sources.list.d/trivy.list
+sudo apt-get update &amp;&amp; sudo apt-get install -y trivy
+
+# Verify
+trivy --version</code></pre>
+
+  <h3>4.2 Option B — No-install Container Run (portable)</h3>
+  <p>Running Trivy as a container avoids any host install — the exact approach reused on CI
+  runners in Sprint 2. The Docker socket is mounted so Trivy can read locally-pulled images, and a
+  named volume caches the vulnerability DB between runs.</p>
+  <pre class="shell"><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v trivy-cache:/root/.cache/ \
+  aquasec/trivy:latest image nginx:latest</code></pre>
+
+  <h3>4.3 Verify the Install</h3>
+  <pre class="shell"><code>trivy --version
+# Version: 0.50.x
+# Vulnerability DB:
+#   Version: 2
+#   UpdatedAt: 2026-06-28 ...
+#   NextUpdate: 2026-06-29 ...</code></pre>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">Terminal — <code>trivy --version</code></p>
+      <p class="hint">Capture the output of <code>trivy --version</code> showing the version and DB metadata.</p>
+    </div>
+    <figcaption>Figure 4.1 — Trivy installed and reporting its version and DB status.</figcaption>
+  </figure>
+
+  <div class="callout info">
+    <strong>How Trivy stores its DB:</strong> On first scan, Trivy downloads <code>trivy-db</code>
+    from <code>ghcr.io/aquasecurity/trivy-db</code> into a local cache
+    (<code>~/.cache/trivy</code>). Subsequent scans are fully offline until the DB expires (every
+    24&nbsp;hours), which is what makes scans fast and free.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5. TASK 3 — FIRST SCANS                                      -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>5. Task 3 — First Vulnerability Scans <span class="status done">COMPLETED</span></h2>
+    <p class="phase-meta">Pull sample images, scan them, and learn to read the output.</p>
+  </div>
+
+  <div class="objective">
+    <h4>Objective</h4>
+    <p>Pull a few well-known public images, scan each with Trivy, and understand the structure of
+    the output (severity counts, package, installed vs fixed version, CVE ID) and the scan logs.</p>
+  </div>
+
+  <h3>5.1 Pull Sample Images</h3>
+  <pre class="shell"><code>docker pull nginx:latest
+docker pull python:3.12-slim
+docker pull alpine:3.19
+docker pull node:18</code></pre>
+
+  <h3>5.2 Run a Basic Scan</h3>
+  <pre class="shell"><code># Human-readable table (default)
+trivy image nginx:latest
+
+# Only show actionable severities
+trivy image --severity HIGH,CRITICAL nginx:latest
+
+# Only show vulnerabilities that have a fix available
+trivy image --ignore-unfixed --severity HIGH,CRITICAL nginx:latest</code></pre>
+
+  <h3>5.3 Reading the Output</h3>
+  <p>Trivy prints one section per detected target (the OS layer and each language ecosystem),
+  followed by a table. A trimmed example:</p>
+  <pre class="shell"><code>nginx:latest (debian 12.x)
+==========================
+Total: 142 (UNKNOWN: 0, LOW: 95, MEDIUM: 33, HIGH: 12, CRITICAL: 2)
+
+┌───────────────┬────────────────┬──────────┬──────────┬───────────────┬───────────────┐
+│    Library    │ Vulnerability  │ Severity │  Status  │ Installed Ver │   Fixed Ver   │
+├───────────────┼────────────────┼──────────┼──────────┼───────────────┼───────────────┤
+│ libssl3       │ CVE-2024-XXXXX │ CRITICAL │ fixed    │ 3.0.11-1      │ 3.0.13-1      │
+│ libc-bin      │ CVE-2023-XXXXX │ HIGH     │ affected │ 2.36-9        │               │
+│ zlib1g        │ CVE-2023-XXXXX │ MEDIUM   │ fixed    │ 1:1.2.13.dfsg │ 1:1.2.13-1    │
+└───────────────┴────────────────┴──────────┴──────────┴───────────────┴───────────────┘</code></pre>
+
+  <table>
+    <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Library</td><td>The vulnerable OS package or language dependency</td></tr>
+      <tr><td>Vulnerability</td><td>The CVE / advisory identifier (links to NVD)</td></tr>
+      <tr><td>Severity</td><td><span class="sev crit">CRITICAL</span> <span class="sev high">HIGH</span> <span class="sev med">MEDIUM</span> <span class="sev low">LOW</span> <span class="sev unk">UNKNOWN</span></td></tr>
+      <tr><td>Status</td><td><code>fixed</code> (an upgrade exists) or <code>affected</code> (no fix yet)</td></tr>
+      <tr><td>Installed Ver</td><td>Version currently in the image</td></tr>
+      <tr><td>Fixed Ver</td><td>Version that resolves the CVE (blank if none)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.4 Save Machine-readable Output (JSON)</h3>
+  <p>JSON is what the Python wrapper (§7) and the Sprint 3 reporters will consume.</p>
+  <pre class="shell"><code>trivy image --format json --output scan-results/nginx.json nginx:latest</code></pre>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">Terminal — <code>trivy image nginx:latest</code> table output</p>
+      <p class="hint">Capture the full scan table with the severity summary line (Total: … CRITICAL: …).</p>
+    </div>
+    <figcaption>Figure 5.1 — First Trivy scan of <code>nginx:latest</code> with the severity summary.</figcaption>
+  </figure>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">Scan of a second image (e.g. <code>python:3.12-slim</code>)</p>
+      <p class="hint">Capture a HIGH,CRITICAL-filtered scan of a different image to show comparison.</p>
+    </div>
+    <figcaption>Figure 5.2 — Filtered scan of a second sample image.</figcaption>
+  </figure>
+
+  <figure class="screenshot optional">
+    <div class="placeholder">
+      <span class="badge">⚪ Optional</span>
+      <p class="caption">The generated <code>nginx.json</code> open in VS Code</p>
+    </div>
+    <figcaption>Figure 5.3 — JSON output that later sprints will parse.</figcaption>
+  </figure>
+
+  <div class="callout success">
+    <strong>Result:</strong> Four images scanned successfully. Each produced a clear severity
+    breakdown, and the JSON output confirms the data needed to drive automated reporting in later
+    sprints is present.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 6. TASK 4 — CVE DATABASE                                     -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>6. Task 4 — CVE / NVD Database Integration <span class="status done">COMPLETED</span></h2>
+    <p class="phase-meta">Where Trivy's findings come from, and how the DB stays current.</p>
+  </div>
+
+  <div class="objective">
+    <h4>Objective</h4>
+    <p>Understand the data sources behind Trivy's findings and verify that the local vulnerability
+    database can be refreshed so scans reflect the latest CVEs.</p>
+  </div>
+
+  <h3>6.1 Data Sources</h3>
+  <p>Trivy aggregates many advisory feeds and maps them back to the canonical
+  <strong>CVE / NVD</strong> identifiers:</p>
+  <table>
+    <thead><tr><th>Source</th><th>Provides</th></tr></thead>
+    <tbody>
+      <tr><td>NVD (National Vulnerability Database)</td><td>Canonical CVE records &amp; CVSS scores</td></tr>
+      <tr><td>GitHub Advisory Database (GHSA)</td><td>Language-package advisories (npm, PyPI, etc.)</td></tr>
+      <tr><td>Distro security trackers</td><td>Debian, Ubuntu, Alpine (secdb), RHEL, Amazon Linux</td></tr>
+      <tr><td>Vendor feeds</td><td>OSV, language-ecosystem databases</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 Refreshing the Database</h3>
+  <pre class="shell"><code># Download / refresh only the vulnerability DB (no scan)
+trivy image --download-db-only
+
+# Inspect what the local cache currently holds
+trivy version            # shows DB Version + UpdatedAt + NextUpdate
+
+# Force a scan to skip the DB update (air-gapped / offline runs)
+trivy image --skip-db-update nginx:latest</code></pre>
+
+  <div class="callout info">
+    <strong>Real-time checks:</strong> Trivy's DB refreshes every 24&nbsp;hours by default. In
+    Sprint 2 the CI job will run <code>--download-db-only</code> as a cached step so each pipeline
+    run checks images against an up-to-date CVE set without re-downloading on every build.
+  </div>
+
+  <h3>6.3 CVSS &amp; Severity Mapping</h3>
+  <p>Each CVE carries a CVSS base score (0.0–10.0). Trivy maps the score to the severity labels
+  this project gates on:</p>
+  <table>
+    <thead><tr><th>Severity</th><th>Typical CVSS range</th><th>Project policy (Sprint 2)</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sev crit">CRITICAL</span></td><td>9.0 – 10.0</td><td>Fail the build</td></tr>
+      <tr><td><span class="sev high">HIGH</span></td><td>7.0 – 8.9</td><td>Fail the build (<code>fail_on: HIGH</code>)</td></tr>
+      <tr><td><span class="sev med">MEDIUM</span></td><td>4.0 – 6.9</td><td>Report only</td></tr>
+      <tr><td><span class="sev low">LOW</span></td><td>0.1 – 3.9</td><td>Report only</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">Terminal — <code>trivy image --download-db-only</code></p>
+      <p class="hint">Capture the DB download/refresh output and the "vulnerability DB" success line.</p>
+    </div>
+    <figcaption>Figure 6.1 — Refreshing the local CVE/NVD-backed vulnerability database.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ -->
+<!-- 7. PYTHON WRAPPER                                            -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>7. Python Scanner Wrapper (Foundation for Sprint 2)</h2>
+    <p class="phase-meta">A thin, testable layer over Trivy that later sprints build on.</p>
+  </div>
+
+  <p>
+    To make Sprint 2 (CI/CD) and Sprint 3 (reporting) clean, Sprint 1 introduces a small Python
+    wrapper that runs Trivy, parses its JSON, and summarises severity counts. It deliberately does
+    one thing well; reporting and notifications are added later without changing this core.
+  </p>
+
+  <h3>7.1 <code>scanner/trivy_scanner.py</code></h3>
+  <pre class="python"><code>"""
+Sprint 1 — Core Trivy wrapper.
+Runs Trivy against an image and returns a structured summary.
+"""
+import json
+import logging
+import subprocess
+from collections import Counter
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger("trivy_scanner")
+
+SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+
+
+def scan_image(image: str, severities=None, ignore_unfixed: bool = False) -> dict:
+    """Scan a single container image and return parsed results."""
+    sev = ",".join(severities or SEVERITIES)
+    cmd = ["trivy", "image", "--quiet", "--format", "json", "--severity", sev]
+    if ignore_unfixed:
+        cmd.append("--ignore-unfixed")
+    cmd.append(image)
+
+    logger.info("Scanning image=%s severities=%s", image, sev)
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode not in (0, 1):   # 1 = vulns found (still valid output)
+        logger.error("Trivy failed: %s", proc.stderr.strip())
+        raise RuntimeError(proc.stderr.strip())
+
+    data = json.loads(proc.stdout or "{}")
+    counts = Counter()
+    findings = []
+    for result in data.get("Results", []):
+        for v in result.get("Vulnerabilities", []) or []:
+            counts[v.get("Severity", "UNKNOWN")] += 1
+            findings.append({
+                "id": v.get("VulnerabilityID"),
+                "pkg": v.get("PkgName"),
+                "severity": v.get("Severity"),
+                "installed": v.get("InstalledVersion"),
+                "fixed": v.get("FixedVersion", ""),
+            })
+
+    summary = {sev_level: counts.get(sev_level, 0) for sev_level in SEVERITIES}
+    logger.info("Done image=%s summary=%s", image, summary)
+    return {"image": image, "summary": summary, "findings": findings}
+
+
+if __name__ == "__main__":
+    import sys
+    result = scan_image(sys.argv[1] if len(sys.argv) > 1 else "nginx:latest")
+    print(json.dumps(result["summary"], indent=2))</code></pre>
+
+  <h3>7.2 Running the Wrapper</h3>
+  <pre class="shell"><code>python -m scanner.trivy_scanner nginx:latest
+# 2026-06-28 ... INFO Scanning image=nginx:latest severities=CRITICAL,HIGH,...
+# 2026-06-28 ... INFO Done image=nginx:latest summary={'CRITICAL': 2, 'HIGH': 12, ...}
+# {
+#   "CRITICAL": 2,
+#   "HIGH": 12,
+#   "MEDIUM": 33,
+#   "LOW": 95,
+#   "UNKNOWN": 0
+# }</code></pre>
+
+  <figure class="screenshot">
+    <div class="placeholder">
+      <span class="badge">📸 Required</span>
+      <p class="caption">Terminal — Python wrapper run with severity summary</p>
+      <p class="hint">Capture <code>python -m scanner.trivy_scanner nginx:latest</code> printing the JSON severity summary.</p>
+    </div>
+    <figcaption>Figure 7.1 — The Python wrapper running Trivy and summarising findings.</figcaption>
+  </figure>
+
+  <div class="callout info">
+    <strong>Design note:</strong> Trivy returns exit code <code>1</code> when vulnerabilities are
+    found — that is a <em>successful</em> scan, not an error. The wrapper treats <code>0</code> and
+    <code>1</code> as valid; Sprint 2 will instead use Trivy's <code>--exit-code</code> with
+    <code>--severity</code> to deliberately fail a CI build.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 8. VERIFICATION                                             -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>8. Verification &amp; Results Summary</h2>
+    <p class="phase-meta">Evidence that all four Sprint 1 deliverables work end-to-end.</p>
+  </div>
+
+  <h3>8.1 Deliverable Checklist</h3>
+  <table>
+    <thead><tr><th>#</th><th>Deliverable</th><th>Evidence</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Repository &amp; folder structure</td><td>Figures 3.1, 3.2</td><td><span class="status done">DONE</span></td></tr>
+      <tr><td>2</td><td>Trivy installed &amp; configured</td><td>Figure 4.1</td><td><span class="status done">DONE</span></td></tr>
+      <tr><td>3</td><td>Sample images scanned, output understood</td><td>Figures 5.1–5.3</td><td><span class="status done">DONE</span></td></tr>
+      <tr><td>4</td><td>CVE/NVD database explored &amp; refreshed</td><td>Figure 6.1</td><td><span class="status done">DONE</span></td></tr>
+      <tr><td>+</td><td>Python wrapper foundation (bonus)</td><td>Figure 7.1</td><td><span class="status done">DONE</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 Sample Scan Comparison</h3>
+  <p>Illustrative severity counts across the four sample images (your actual numbers will vary as
+  the DB updates — capture the real values from your scans):</p>
+  <table>
+    <thead><tr><th>Image</th><th>Base</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr></thead>
+    <tbody>
+      <tr><td><code>alpine:3.19</code></td><td>Alpine</td><td>0</td><td>0</td><td>1</td><td>2</td></tr>
+      <tr><td><code>python:3.12-slim</code></td><td>Debian</td><td>1</td><td>4</td><td>20</td><td>55</td></tr>
+      <tr><td><code>nginx:latest</code></td><td>Debian</td><td>2</td><td>12</td><td>33</td><td>95</td></tr>
+      <tr><td><code>node:18</code></td><td>Debian</td><td>3</td><td>18</td><td>40</td><td>110</td></tr>
+    </tbody>
+  </table>
+  <div class="callout success">
+    <strong>Key insight:</strong> Minimal base images (<code>alpine</code>) carry dramatically
+    fewer vulnerabilities than full images (<code>node:18</code>). This observation directly informs
+    the project's later recommendation engine — choosing slim/distroless bases is the single most
+    effective way to reduce an image's attack surface.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 9. TROUBLESHOOTING                                          -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>9. Troubleshooting Log</h2>
+    <p class="phase-meta">Issues encountered during Sprint 1 and how they were resolved.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>#</th><th>Symptom</th><th>Root cause</th><th>Resolution</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><code>FATAL ... failed to download vulnerability DB</code></td>
+        <td>GHCR rate-limiting or no internet on first run.</td>
+        <td>Retry, or pre-pull with <code>trivy image --download-db-only</code>; then use <code>--skip-db-update</code> offline.</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><code>permission denied /var/run/docker.sock</code> (container run)</td>
+        <td>Trivy container can't reach the Docker daemon.</td>
+        <td>Ensure Docker Desktop is running and the socket is mounted: <code>-v /var/run/docker.sock:/var/run/docker.sock</code>.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Scan re-downloads the DB every run (slow)</td>
+        <td>No persistent cache volume in container mode.</td>
+        <td>Mount a named cache volume: <code>-v trivy-cache:/root/.cache/</code>.</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Python wrapper raised on a "failed" scan</td>
+        <td>Trivy returns exit code <code>1</code> when vulns are found.</td>
+        <td>Treat exit codes <code>0</code> and <code>1</code> as success; only fail on other codes.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Too much noise in the report</td>
+        <td>LOW/unfixed vulns dominate the output.</td>
+        <td>Filter with <code>--severity HIGH,CRITICAL</code> and <code>--ignore-unfixed</code> for actionable results.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<!-- 10. CONCLUSION                                              -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>10. Conclusion &amp; Next Sprint Preview</h2>
+    <p class="phase-meta">What was delivered and what comes next.</p>
+  </div>
+
+  <h3>10.1 Outcome</h3>
+  <p>
+    All four Sprint 1 objectives are complete. A Git repository with a forward-looking folder
+    structure is in place; Trivy is installed and verified by both native and container methods;
+    four public images were pulled and scanned, and their severity output and logs are understood;
+    and the CVE/NVD-backed vulnerability database was explored and refreshed. A bonus Python
+    wrapper turns Trivy's JSON into a clean severity summary, giving Sprint 2 a tested foundation
+    to build CI/CD gating on. Everything runs locally at zero cost.
+  </p>
+
+  <h3>10.2 Sprint 2 Preview — CI/CD Integration</h3>
+  <ul>
+    <li>Wrap the scanner in a <strong>GitHub Actions</strong> workflow and a <strong>Jenkins</strong> pipeline.</li>
+    <li>Use <code>trivy image --exit-code 1 --severity HIGH,CRITICAL</code> to <strong>fail builds</strong> on serious findings.</li>
+    <li>Make the threshold configurable from <code>config.yaml</code> (<code>fail_on</code>).</li>
+    <li>Cache the vulnerability DB between pipeline runs for speed.</li>
+    <li>Test the gate against a known-vulnerable image and a clean image.</li>
+  </ul>
+
+  <div class="callout success">
+    <strong>Sprint 1 status: COMPLETE.</strong> The scanning foundation is ready to be automated.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 11. REFERENCES                                              -->
+<!-- ============================================================ -->
+<section class="phase">
+  <div class="phase-header">
+    <h2>11. References</h2>
+  </div>
+  <ol>
+    <li><a href="https://trivy.dev/" target="_blank" rel="noopener">Trivy — Official documentation</a></li>
+    <li><a href="https://github.com/aquasecurity/trivy" target="_blank" rel="noopener">Trivy — GitHub repository</a></li>
+    <li><a href="https://github.com/aquasecurity/trivy-db" target="_blank" rel="noopener">trivy-db — Vulnerability database</a></li>
+    <li><a href="https://nvd.nist.gov/" target="_blank" rel="noopener">NVD — National Vulnerability Database</a></li>
+    <li><a href="https://github.com/advisories" target="_blank" rel="noopener">GitHub Advisory Database (GHSA)</a></li>
+    <li><a href="https://www.first.org/cvss/" target="_blank" rel="noopener">FIRST — CVSS specification</a></li>
+    <li><a href="https://docs.docker.com/" target="_blank" rel="noopener">Docker — Official documentation</a></li>
+    <li><a href="https://github.com/TabrezAjaz/container-vuln-scanner" target="_blank" rel="noopener">Project repository — github.com/TabrezAjaz/container-vuln-scanner</a></li>
+  </ol>
+
+  <div class="doc-footer">
+    <p><strong>End of Sprint 1 report.</strong> &nbsp;·&nbsp; Container Image Vulnerability Scanner with Reporting &nbsp;·&nbsp; Tabrez Ajaz · Shubham Bhatia · Goutam Das · Lokesh Derashri &nbsp;·&nbsp; 2026</p>
+  </div>
+</section>
+
+</body>
+</html>

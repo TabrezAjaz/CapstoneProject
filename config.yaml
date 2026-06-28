@@ -1,0 +1,29 @@
+# ==========================================================
+# config.yaml — central project configuration
+# Container Image Vulnerability Scanner with Reporting
+# ==========================================================
+
+scanner:
+  engine: trivy
+  # Severities to include in reports
+  severities: [LOW, MEDIUM, HIGH, CRITICAL]
+  # Build fails if any finding is at or above this level (used in Sprint 2)
+  fail_on: HIGH
+  ignore_unfixed: false      # include vulns with no fix available
+  timeout: "5m"
+
+output:
+  dir: "./scan-results"
+  formats: [table, json]
+
+images:
+  # Sample images scanned in Sprint 1
+  - nginx:latest
+  - python:3.12-slim
+  - alpine:3.19
+  - node:18
+
+# Placeholders wired up in later sprints
+notifications:
+  slack_webhook: ""          # Sprint 3
+exceptions_file: "exceptions/allowlist.yaml"   # Sprint 5

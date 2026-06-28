@@ -1,0 +1,6 @@
+# Sample images scanned in Sprint 1.
+# Pull with: docker pull <image>
+nginx:latest
+python:3.12-slim
+alpine:3.19
+node:18

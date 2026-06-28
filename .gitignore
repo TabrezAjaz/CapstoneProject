@@ -1,0 +1,17 @@
+# ===== Scan artifacts & secrets should never be committed =====
+scan-results/*
+!scan-results/.gitkeep
+*.log
+.env
+
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# ===== Trivy =====
+trivy-cache/
+.trivycache/
