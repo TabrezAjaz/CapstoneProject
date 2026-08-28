@@ -13,7 +13,7 @@
 <h2>2. Requirement Traceability</h2>
 <table><thead><tr><th>Sprint requirement</th><th>Implementation</th><th>Status</th></tr></thead><tbody>
 <tr><td>Automate new-image scanning in GitHub Actions</td><td><code>.github/workflows/container-scan.yml</code></td><td><span class="badge done">VERIFIED</span></td></tr>
-<tr><td>Automate scanning in Jenkins</td><td><code>ci/Jenkinsfile</code>, parameterized image and threshold</td><td><span class="badge done">IMPLEMENTED</span></td></tr>
+<tr><td>Automate scanning in Jenkins</td><td><code>ci/Jenkinsfile</code>, parameterized image and threshold</td><td><span class="badge done">VERIFIED</span></td></tr>
 <tr><td>Fail builds by severity</td><td>Python policy evaluates configured minimum severity</td><td><span class="badge done">VERIFIED</span></td></tr>
 <tr><td>Environment-controlled scanning</td><td>Eight documented environment variables with strict validation</td><td><span class="badge done">TESTED</span></td></tr>
 <tr><td>Test with sample images</td><td><code>hello-world:latest</code> pass; <code>alpine:3.19</code> blocked at HIGH</td><td><span class="badge done">VERIFIED</span></td></tr>
@@ -60,7 +60,10 @@
 
 <h2>8. Jenkins Integration</h2>
 <p>The declarative pipeline accepts <code>SCAN_IMAGE</code> and <code>SCANNER_FAIL_ON</code> parameters. It checks out source, creates an isolated virtual environment, verifies Trivy, refreshes the CVE database with retry, runs tests, executes the shared policy gate, publishes JUnit and archives JSON even on failure.</p>
-<div class="callout warn"><strong>Agent prerequisite:</strong> configure a Linux Jenkins agent with Python 3 and Trivy 0.74.0, then use Script Path <code>ci/Jenkinsfile</code>. No Jenkins controller is installed on the development workstation, so controller-specific screenshots will be captured when that execution environment is provisioned.</div>
+<div class="callout"><strong>Verified controller:</strong> the academic Jenkins controller loaded <code>ci/Jenkinsfile</code> from the public <code>sprint-2</code> branch. Because its Linux agent did not provide <code>python3-venv</code> or Trivy, the pipeline installs Python packages into an isolated workspace target and downloads pinned Trivy 0.74.0 without sudo.</div>
+<figure><img src="screenshots/sprint2-jenkins-passed-run.png" alt="Successful Jenkins vulnerability gate build with archived JSON and passing tests"><figcaption>Figure 8.1 — Jenkins build #2 passed for <code>hello-world:latest</code>, published 16 passing tests, and archived the normalized JSON result.</figcaption></figure>
+<figure><img src="screenshots/sprint2-jenkins-blocked-run.png" alt="Jenkins build intentionally failed by vulnerability policy with archived JSON"><figcaption>Figure 8.2 — Jenkins build #3 intentionally failed for <code>alpine:3.19</code> at the HIGH threshold while retaining its JSON artifact.</figcaption></figure>
+<figure><img src="screenshots/sprint2-jenkins-blocked-console.png" alt="Jenkins console showing Alpine severity summary and policy blocked message"><figcaption>Figure 8.3 — Console evidence: 2 HIGH findings produced <code>POLICY BLOCKED</code> and exit code 1.</figcaption></figure>
 
 <h2>9. Security, Reliability and Cost</h2>
 <ul><li>Read-only GitHub token permission and no <code>pull_request_target</code>.</li><li>Pinned Trivy and current official action releases.</li><li>No Docker socket mount for registry-reference scans.</li><li>No credentials in image references or repository configuration.</li><li>Configuration is validated and subprocess execution does not use a shell.</li><li>Database caching, concurrency cancellation and 14-day artifact retention limit cost and exposure.</li><li>Open-source Trivy, GitHub-hosted public-repository runners and local Jenkins agents keep incremental cost at zero.</li></ul>
@@ -72,10 +75,11 @@
 <tr><td>Green CI path</td><td>GitHub Actions run #6</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Blocking CI path</td><td>GitHub Actions run #5, exit 1</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Artifacts on red build</td><td><code>vulnerability-evidence-5</code>, expires 11 Sep 2026</td><td><span class="badge done">PASS</span></td></tr>
-<tr><td>Jenkins live run</td><td>Requires Jenkins agent/controller provisioning</td><td><span class="badge pending">NEXT VALIDATION</span></td></tr>
+<tr><td>Jenkins green path</td><td>Build #2, <code>hello-world:latest</code>, 16 tests, JSON archived</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Jenkins blocking path</td><td>Build #3, <code>alpine:3.19</code>, 2 HIGH findings, JSON archived</td><td><span class="badge done">PASS</span></td></tr>
 </tbody></table>
 
 <h2>11. Conclusion</h2>
-<p>The core Sprint 2 objective is operational: container vulnerability policy is now enforced automatically, configuration is portable, failures are unambiguous, tests are deterministic and evidence survives blocked builds. GitHub Actions is verified end-to-end with positive and negative paths. The same gate is encoded for Jenkins and awaits execution on a provisioned Jenkins environment.</p>
+<p>The Sprint 2 objective is fully operational: container vulnerability policy is enforced automatically, configuration is portable, failures are unambiguous, tests are deterministic and evidence survives blocked builds. Both GitHub Actions and Jenkins are verified end-to-end with genuine green and intentional policy-blocked paths.</p>
 <div class="footer">Container Image Vulnerability Scanner with Reporting · Sprint 2 · 29 August 2026</div>
 </main></body></html>

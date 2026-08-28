@@ -101,8 +101,9 @@ with `alpine:3.19` and `HIGH` to demonstrate an intentional policy block.
 ### Jenkins
 
 Create a Pipeline job for this repository with **Script Path** `ci/Jenkinsfile`. The pipeline uses
-a Linux agent with Python 3 and Trivy 0.74.0. Parameters select the image and policy threshold;
-JSON and JUnit evidence is retained for both green and blocked builds.
+a Linux agent with Python 3, downloads pinned Trivy 0.74.0 without sudo, and installs Python
+packages into the workspace without requiring `python3-venv`. Parameters select the image and
+policy threshold; JSON and JUnit evidence is retained for both green and blocked builds.
 
 Do not put registry credentials in configuration files or image references. Use masked provider
 credentials for private registries. Registry-reference scans do not require the Docker socket.
