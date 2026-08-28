@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds(abortPrevious: true)
+    }
+
+    parameters {
+        string(name: 'SCAN_IMAGE', defaultValue: 'alpine:3.19', description: 'Container image reference')
+        choice(name: 'SCANNER_FAIL_ON', choices: ['HIGH', 'CRITICAL', 'MEDIUM', 'LOW'], description: 'Minimum blocking severity')
+    }
+
+    environment {
+        TRIVY_VERSION = '0.74.0'
+        SCANNER_OUTPUT_DIR = 'scan-results'
+        SCANNER_TIMEOUT = '15m'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Environment') {
+            steps {
+                sh '''
+                    python3 -m venv .venv
+                    .venv/bin/python -m pip install --upgrade pip
+                    .venv/bin/pip install -r requirements-dev.txt
+                    trivy --version
+                '''
+            }
+        }
+
+        stage('Refresh vulnerability DB') {
+            steps {
+                retry(2) {
+                    sh 'trivy image --download-db-only'
+                }
+            }
+        }
+
+        stage('Tests') {
+            steps {
+                sh '.venv/bin/pytest -q --junitxml=test-results/junit.xml'
+            }
+        }
+
+        stage('Vulnerability Gate') {
+            steps {
+                sh '.venv/bin/python -m scanner.trivy_scanner "$SCAN_IMAGE"'
+            }
+        }
+    }
+
+    post {
+        always {
+            junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'scan-results/*.json', fingerprint: true
+        }
+        cleanup {
+            deleteDir()
+        }
+    }
+}

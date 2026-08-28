@@ -1,14 +1,12 @@
 # ==========================================================
 # Scanner image — bundles Trivy + the Python wrapper.
 # Build:  docker build -t vuln-scanner -f docker/Dockerfile .
-# Run:    docker run --rm \
-#           -v /var/run/docker.sock:/var/run/docker.sock \
-#           -v trivy-cache:/root/.cache/ \
+# Run:    docker run --rm -v trivy-cache:/root/.cache/ \
 #           vuln-scanner nginx:latest
 # ==========================================================
 
 # Stage 1 — grab the Trivy binary from the official image
-FROM aquasec/trivy:latest AS trivy
+FROM aquasec/trivy:0.74.0 AS trivy
 
 # Stage 2 — Python runtime + our wrapper
 FROM python:3.12-slim
