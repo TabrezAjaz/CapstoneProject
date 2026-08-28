@@ -73,7 +73,7 @@ jobs:
         run: trivy image --download-db-only
 
       - name: Run deterministic tests
-        run: pytest -q --junitxml=test-results/junit.xml
+        run: python -m pytest -q --junitxml=test-results/junit.xml
 
       - name: Enforce image vulnerability policy
         run: python -m scanner.trivy_scanner "$SCAN_IMAGE"
