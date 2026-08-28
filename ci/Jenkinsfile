@@ -52,7 +52,29 @@ pipeline {
 
         stage('Vulnerability Gate') {
             steps {
-                sh 'PATH="$WORKSPACE/.tools:$PATH" PYTHONPATH=.ci-python python3 -m scanner.trivy_scanner "$SCAN_IMAGE"'
+                script {
+                    env.SCAN_EXIT = sh(
+                        script: 'PATH="$WORKSPACE/.tools:$PATH" PYTHONPATH=.ci-python python3 -m scanner.trivy_scanner "$SCAN_IMAGE"',
+                        returnStatus: true
+                    ).toString()
+                }
+            }
+        }
+
+        stage('Generate Reports') {
+            when { expression { fileExists('scan-results') } }
+            steps {
+                sh 'PYTHONPATH=.ci-python python3 -m reporters.cli scan-results/*-????????.json --formats json,html,pdf --output-dir reports'
+            }
+        }
+
+        stage('Enforce Gate Result') {
+            steps {
+                script {
+                    if (env.SCAN_EXIT != '0') {
+                        error("Vulnerability gate exited with code ${env.SCAN_EXIT}")
+                    }
+                }
             }
         }
     }
@@ -61,6 +83,7 @@ pipeline {
         always {
             junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'scan-results/*.json', fingerprint: true
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/*', fingerprint: true
         }
         cleanup {
             deleteDir()
