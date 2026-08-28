@@ -26,10 +26,12 @@ pipeline {
         stage('Environment') {
             steps {
                 sh '''
-                    python3 -m venv .venv
-                    .venv/bin/python -m pip install --upgrade pip
-                    .venv/bin/pip install -r requirements-dev.txt
-                    trivy --version
+                    rm -rf .ci-python .tools
+                    mkdir -p .ci-python .tools
+                    python3 -m pip install --disable-pip-version-check --target .ci-python -r requirements-dev.txt
+                    curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+                      | tar -xz -C .tools trivy
+                    .tools/trivy --version
                 '''
             }
         }
@@ -37,20 +39,20 @@ pipeline {
         stage('Refresh vulnerability DB') {
             steps {
                 retry(2) {
-                    sh 'trivy image --download-db-only'
+                    sh '.tools/trivy image --download-db-only'
                 }
             }
         }
 
         stage('Tests') {
             steps {
-                sh '.venv/bin/python -m pytest -q --junitxml=test-results/junit.xml'
+                sh 'PYTHONPATH=.ci-python python3 -m pytest -q --junitxml=test-results/junit.xml'
             }
         }
 
         stage('Vulnerability Gate') {
             steps {
-                sh '.venv/bin/python -m scanner.trivy_scanner "$SCAN_IMAGE"'
+                sh 'PATH="$WORKSPACE/.tools:$PATH" PYTHONPATH=.ci-python python3 -m scanner.trivy_scanner "$SCAN_IMAGE"'
             }
         }
     }
