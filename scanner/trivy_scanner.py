@@ -27,7 +27,12 @@ CONFIG_PATH = os.environ.get("SCANNER_CONFIG", "config.yaml")
 def load_config(path: str = CONFIG_PATH) -> dict:
     """Load config.yaml if present; fall back to sensible defaults."""
     defaults = {
-        "scanner": {"severities": SEVERITIES, "ignore_unfixed": False},
+        "scanner": {
+            "severities": SEVERITIES,
+            "ignore_unfixed": False,
+            "pkg_types": ["os"],
+            "timeout": "15m",
+        },
         "output": {"dir": "./scan-results"},
         "images": ["nginx:latest"],
     }
@@ -42,19 +47,29 @@ def load_config(path: str = CONFIG_PATH) -> dict:
     return cfg
 
 
-def scan_image(image: str, severities=None, ignore_unfixed: bool = False) -> dict:
+def scan_image(
+    image: str,
+    severities=None,
+    ignore_unfixed: bool = False,
+    pkg_types=None,
+    timeout: str | None = None,
+) -> dict:
     """Scan a single container image and return parsed results."""
     sev = ",".join(severities or SEVERITIES)
     cmd = ["trivy", "image", "--quiet", "--format", "json", "--severity", sev]
     if ignore_unfixed:
         cmd.append("--ignore-unfixed")
+    if pkg_types:
+        cmd.extend(["--pkg-types", ",".join(pkg_types)])
+    if timeout:
+        cmd.extend(["--timeout", timeout])
     cmd.append(image)
 
     logger.info("Scanning image=%s severities=%s", image, sev)
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode not in (0, 1):   # 1 = vulnerabilities found (still valid output)
+    if proc.returncode != 0:
         logger.error("Trivy failed: %s", proc.stderr.strip())
-        raise RuntimeError(proc.stderr.strip())
+        raise RuntimeError(proc.stderr.strip() or f"Trivy exited with code {proc.returncode}")
 
     data = json.loads(proc.stdout or "{}")
     counts = Counter()
@@ -80,12 +95,20 @@ def scan_from_config(path: str = CONFIG_PATH) -> list:
     cfg = load_config(path)
     sev = cfg["scanner"].get("severities", SEVERITIES)
     ignore_unfixed = bool(cfg["scanner"].get("ignore_unfixed", False))
+    pkg_types = cfg["scanner"].get("pkg_types")
+    timeout = cfg["scanner"].get("timeout")
     out_dir = cfg["output"].get("dir", "./scan-results")
     os.makedirs(out_dir, exist_ok=True)
 
     results = []
     for image in cfg.get("images", []):
-        result = scan_image(image, severities=sev, ignore_unfixed=ignore_unfixed)
+        result = scan_image(
+            image,
+            severities=sev,
+            ignore_unfixed=ignore_unfixed,
+            pkg_types=pkg_types,
+            timeout=timeout,
+        )
         safe = image.replace(":", "_").replace("/", "_")
         with open(os.path.join(out_dir, f"{safe}.json"), "w", encoding="utf-8") as fh:
             json.dump(result, fh, indent=2)
@@ -97,7 +120,15 @@ def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
     if argv:
         # Scan a single image passed on the command line
-        result = scan_image(argv[0])
+        cfg = load_config()
+        scanner_cfg = cfg["scanner"]
+        result = scan_image(
+            argv[0],
+            severities=scanner_cfg.get("severities", SEVERITIES),
+            ignore_unfixed=bool(scanner_cfg.get("ignore_unfixed", False)),
+            pkg_types=scanner_cfg.get("pkg_types"),
+            timeout=scanner_cfg.get("timeout"),
+        )
         print(json.dumps(result["summary"], indent=2))
     else:
         # No argument -> scan every image in config.yaml
