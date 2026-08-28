@@ -16,7 +16,8 @@ scanner:
 
 output:
   dir: "./scan-results"
-  formats: [table, json]
+  report_dir: "./reports"
+  formats: [json, html, pdf]
 
 images:
   # Sample images scanned in Sprint 1
@@ -27,5 +28,6 @@ images:
 
 # Placeholders wired up in later sprints
 notifications:
-  slack_webhook: ""          # Sprint 3
+  provider: slack
+  alert_on: HIGH
 exceptions_file: "exceptions/allowlist.yaml"   # Sprint 5

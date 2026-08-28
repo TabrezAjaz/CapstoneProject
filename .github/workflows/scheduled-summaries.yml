@@ -1,0 +1,68 @@
+name: Scheduled vulnerability summaries
+
+on:
+  schedule:
+    - cron: '23 2 * * *'
+    - cron: '41 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      period:
+        description: Summary period
+        type: choice
+        options: [daily, weekly]
+        default: daily
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vulnerability-summary-${{ github.event.schedule || inputs.period }}
+  cancel-in-progress: false
+
+env:
+  TRIVY_VERSION: v0.74.0
+  SCANNER_OUTPUT_DIR: scan-results
+  REPORT_OUTPUT_DIR: reports
+  PERIOD: ${{ inputs.period || (github.event.schedule == '41 3 * * 1' && 'weekly' || 'daily') }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          cache: true
+      - run: trivy image --download-db-only
+      - name: Scan configured images
+        id: scan
+        continue-on-error: true
+        run: |
+          python -m scanner.trivy_scanner --all-configured
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+      - name: Generate summary reports
+        if: always() && hashFiles('scan-results/*-????????.json') != ''
+        run: python -m reporters.cli scan-results/*-????????.json --period "$PERIOD" --formats json,html,pdf --output-dir reports --title "${PERIOD^} Container Vulnerability Summary"
+      - name: Send Slack summary
+        if: always() && hashFiles('reports/*.json') != '' && env.SLACK_WEBHOOK_URL != ''
+        run: python -m notifiers.cli $(find reports -name '*.json' ! -name '*.manifest.json' -print -quit) --always
+      - name: Upload summary evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: vulnerability-${{ env.PERIOD }}-${{ github.run_number }}
+          path: |
+            scan-results/*.json
+            reports/*
+          retention-days: 14
+      - name: Restore scan result
+        if: always() && steps.scan.outputs.exit_code != '0' && steps.scan.outputs.exit_code != '1'
+        run: exit "${{ steps.scan.outputs.exit_code }}"

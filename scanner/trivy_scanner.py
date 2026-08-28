@@ -13,7 +13,9 @@ import os
 import re
 import subprocess
 import sys
+import uuid
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -24,6 +26,8 @@ logger = logging.getLogger("trivy_scanner")
 
 SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
 SEVERITY_RANK = {"UNKNOWN": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+ARTIFACT_SCHEMA_VERSION = "1.0"
+WRAPPER_VERSION = "0.3.0"
 DEFAULT_CONFIG: dict[str, Any] = {
     "scanner": {
         "severities": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
@@ -213,11 +217,26 @@ def write_artifact(result: dict[str, Any], settings: Mapping[str, Any]) -> Path:
     path = artifact_path(str(settings["output_dir"]), result["image"])
     blocking = blocking_count(result["summary"], str(settings["fail_on"]))
     payload = {
+        "schema_version": ARTIFACT_SCHEMA_VERSION,
+        "scan_id": str(uuid.uuid4()),
+        "scanned_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         **result,
         "policy": {"fail_on": settings["fail_on"], "blocking_findings": blocking,
                    "passed": blocking == 0},
         "scan_options": {key: settings[key] for key in
                          ("severities", "ignore_unfixed", "pkg_types", "timeout")},
+        "scanner": {"name": "trivy", "wrapper_version": WRAPPER_VERSION},
+        "source": {
+            "provider": os.environ.get("GITHUB_ACTIONS") and "github-actions"
+                        or os.environ.get("JENKINS_URL") and "jenkins"
+                        or "local",
+            "repository": os.environ.get("GITHUB_REPOSITORY", ""),
+            "commit": os.environ.get("GITHUB_SHA") or os.environ.get("GIT_COMMIT", ""),
+            "run_id": os.environ.get("GITHUB_RUN_ID") or os.environ.get("BUILD_NUMBER", ""),
+            "run_url": os.environ.get("GITHUB_SERVER_URL") and
+                       f"{os.environ.get('GITHUB_SERVER_URL')}/{os.environ.get('GITHUB_REPOSITORY')}/actions/runs/{os.environ.get('GITHUB_RUN_ID')}"
+                       or os.environ.get("BUILD_URL", ""),
+        },
     }
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

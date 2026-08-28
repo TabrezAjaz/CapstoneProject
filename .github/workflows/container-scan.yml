@@ -2,7 +2,7 @@ name: Container vulnerability gate
 
 on:
   push:
-    branches: [main, sprint-2]
+    branches: [main, sprint-2, sprint-3]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -41,6 +41,7 @@ env:
   SCAN_IMAGE: ${{ inputs.image || vars.SCAN_IMAGE || 'hello-world:latest' }}
   SCANNER_FAIL_ON: ${{ inputs.fail_on || vars.SCANNER_FAIL_ON || 'HIGH' }}
   SCANNER_OUTPUT_DIR: scan-results
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
   vulnerability-gate:
@@ -76,7 +77,23 @@ jobs:
         run: python -m pytest -q --junitxml=test-results/junit.xml
 
       - name: Enforce image vulnerability policy
-        run: python -m scanner.trivy_scanner "$SCAN_IMAGE"
+        id: scan
+        continue-on-error: true
+        run: |
+          python -m scanner.trivy_scanner "$SCAN_IMAGE"
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Generate JSON, HTML, and PDF reports
+        if: always() && hashFiles('scan-results/*-????????.json') != ''
+        run: python -m reporters.cli scan-results/*-????????.json --formats json,html,pdf --output-dir reports
+
+      - name: Send severity-aware Slack alert
+        if: always() && github.event_name != 'pull_request' && env.SLACK_WEBHOOK_URL != '' && hashFiles('reports/*.json') != ''
+        run: python -m notifiers.cli $(find reports -name '*.json' ! -name '*.manifest.json' -print -quit)
+
+      - name: Restore vulnerability gate result
+        if: always() && steps.scan.outputs.exit_code != '0'
+        run: exit "${{ steps.scan.outputs.exit_code }}"
 
       - name: Upload scan and test evidence
         if: always()
@@ -85,6 +102,7 @@ jobs:
           name: vulnerability-evidence-${{ github.run_number }}
           path: |
             scan-results/*.json
+            reports/*
             test-results/junit.xml
           if-no-files-found: warn
           retention-days: 14
