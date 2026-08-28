@@ -1,0 +1,1 @@
+{"Results":[{"Target":"vulnerable-image","Vulnerabilities":[{"VulnerabilityID":"CVE-TEST-HIGH","PkgName":"openssl","Severity":"HIGH","InstalledVersion":"1.0","FixedVersion":"1.1"},{"VulnerabilityID":"CVE-TEST-CRITICAL","PkgName":"libc","Severity":"CRITICAL","InstalledVersion":"1.0","FixedVersion":""}]}]}

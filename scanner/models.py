@@ -48,10 +48,15 @@ class ScanResult:
     def total(self) -> int:
         return sum(self.summary.values())
 
-    @property
-    def blocking(self) -> int:
-        """Count of HIGH + CRITICAL findings (used by the CI gate in Sprint 2)."""
-        return self.summary.get("HIGH", 0) + self.summary.get("CRITICAL", 0)
+    def blocking(self, fail_on: str = "HIGH") -> int:
+        """Count findings at or above a configurable severity threshold."""
+        rank = {"UNKNOWN": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+        threshold = rank[fail_on.upper()]
+        return sum(
+            count
+            for severity, count in self.summary.items()
+            if rank.get(severity.upper(), 0) >= threshold
+        )
 
     def to_dict(self) -> dict:
         return asdict(self)

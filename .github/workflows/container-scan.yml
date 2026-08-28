@@ -1,0 +1,90 @@
+name: Container vulnerability gate
+
+on:
+  push:
+    branches: [main, sprint-2]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Container image to scan
+        required: true
+        default: alpine:3.19
+      fail_on:
+        description: Minimum blocking severity
+        required: true
+        default: HIGH
+        type: choice
+        options: [LOW, MEDIUM, HIGH, CRITICAL]
+  workflow_call:
+    inputs:
+      image:
+        description: Container image to scan
+        required: true
+        type: string
+      fail_on:
+        description: Minimum blocking severity
+        required: false
+        default: HIGH
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRIVY_VERSION: 0.74.0
+  SCAN_IMAGE: ${{ inputs.image || vars.SCAN_IMAGE || 'alpine:3.19' }}
+  SCANNER_FAIL_ON: ${{ inputs.fail_on || vars.SCANNER_FAIL_ON || 'HIGH' }}
+  SCANNER_OUTPUT_DIR: scan-results
+
+jobs:
+  vulnerability-gate:
+    name: Vulnerability gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install Python dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.4
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          cache: true
+
+      - name: Refresh vulnerability database
+        run: trivy image --download-db-only
+
+      - name: Run deterministic tests
+        run: pytest -q --junitxml=test-results/junit.xml
+
+      - name: Enforce image vulnerability policy
+        run: python -m scanner.trivy_scanner "$SCAN_IMAGE"
+
+      - name: Upload scan and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnerability-evidence-${{ github.run_number }}
+          path: |
+            scan-results/*.json
+            test-results/junit.xml
+          if-no-files-found: warn
+          retention-days: 14

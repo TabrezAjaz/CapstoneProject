@@ -62,3 +62,46 @@ These are the parts we will connect the scan results to in the upcoming sprints:
 - **Standards-based** — every finding maps back to an official **CVE/NVD** identifier with a CVSS
   score, so our severities follow the industry standard rather than anything we invented.
 
+## Sprint 2 — CI/CD vulnerability gate
+
+Sprint 2 adds one policy-aware Python CLI shared by GitHub Actions and Jenkins. Every successful
+scan writes normalized JSON evidence and evaluates `scanner.fail_on` from `config.yaml`. With the
+default `HIGH` policy, HIGH and CRITICAL findings block the build.
+
+### Local usage
+
+```powershell
+pip install -r requirements-dev.txt
+pytest -q
+python -m scanner.trivy_scanner alpine:3.19
+python -m scanner.trivy_scanner node:18 --fail-on HIGH
+python -m scanner.trivy_scanner --all-configured
+```
+
+| Exit | Meaning |
+|---:|---|
+| 0 | Scan completed and policy passed |
+| 1 | Scan completed and policy blocked the image |
+| 2 | CLI or configuration is invalid |
+| 3 | Trivy, registry, timeout, parsing, or artifact failure |
+
+Configuration precedence is **CLI option > environment variable > YAML > code default**. See
+`.env.example` for `SCAN_IMAGE`, `SCANNER_FAIL_ON`, `SCANNER_SEVERITIES`,
+`SCANNER_IGNORE_UNFIXED`, `SCANNER_PKG_TYPES`, `SCANNER_TIMEOUT`, and `SCANNER_OUTPUT_DIR`.
+
+### GitHub Actions
+
+`.github/workflows/container-scan.yml` runs on pushes, pull requests, manual dispatches, and
+reusable workflow calls. It installs pinned Trivy 0.74.0, refreshes its database, runs tests,
+applies the gate, and uploads JSON/JUnit evidence even when policy blocks the build. Repository
+variables `SCAN_IMAGE` and `SCANNER_FAIL_ON` can override defaults.
+
+### Jenkins
+
+Create a Pipeline job for this repository with **Script Path** `ci/Jenkinsfile`. The pipeline uses
+a Linux agent with Python 3 and Trivy 0.74.0. Parameters select the image and policy threshold;
+JSON and JUnit evidence is retained for both green and blocked builds.
+
+Do not put registry credentials in configuration files or image references. Use masked provider
+credentials for private registries. Registry-reference scans do not require the Docker socket.
+
