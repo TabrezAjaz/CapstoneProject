@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TRIVY_VERSION: 0.74.0
+  TRIVY_VERSION: v0.74.0
   SCAN_IMAGE: ${{ inputs.image || vars.SCAN_IMAGE || 'alpine:3.19' }}
   SCANNER_FAIL_ON: ${{ inputs.fail_on || vars.SCANNER_FAIL_ON || 'HIGH' }}
   SCANNER_OUTPUT_DIR: scan-results
