@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Container Image Vulnerability Scanner — Sprint 2 Report</title>
+<style>
+@page{size:A4;margin:18mm}*{box-sizing:border-box}body{margin:0;font:15px/1.58 "Segoe UI",Arial,sans-serif;color:#172033;background:#fff}main{max-width:1080px;margin:auto;padding:30px}h1,h2,h3{color:#0b5550}h1{font-size:35px}h2{border-bottom:2px solid #20b8a5;padding-bottom:7px;margin-top:42px}h3{margin-top:27px}code,pre{font-family:Consolas,monospace}code{background:#edf7f5;padding:2px 5px;border-radius:4px}pre{background:#0c1720;color:#e7f8f5;padding:18px;border-left:5px solid #20b8a5;border-radius:7px;overflow:auto;white-space:pre-wrap}table{width:100%;border-collapse:collapse;margin:17px 0}th,td{padding:10px;border:1px solid #cad8d6;text-align:left;vertical-align:top}th{background:#dff4f0;color:#0b5550}.cover{min-height:880px;background:linear-gradient(145deg,#073b3a,#10263a);color:white;padding:72px;border:8px solid #26d4bd;display:flex;flex-direction:column;justify-content:center}.cover h1{color:white;font-size:48px;margin-bottom:10px}.cover .sub{color:#72ebda;letter-spacing:.15em;font-weight:700}.meta{margin-top:50px;border:1px solid #56a9a2;padding:22px;border-radius:8px}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px}.done{background:#d9fae3;color:#176c32}.pending{background:#fff2c5;color:#7a5700}.blocked{background:#ffe0e0;color:#a01818}.callout{padding:15px 18px;border-left:5px solid #20b8a5;background:#edf8f6;margin:18px 0}.warn{border-color:#e5a400;background:#fff8dd}figure{margin:24px 0;break-inside:avoid}figure img{width:100%;border:1px solid #afc4c1;border-radius:8px;box-shadow:0 6px 20px #193a3625}figcaption{text-align:center;color:#53656b;font-style:italic;margin-top:7px}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center}.flow div{background:#dff4f0;border:2px solid #20a995;border-radius:8px;padding:14px;text-align:center;font-weight:700}.flow i{text-align:center;color:#0b5550;font-size:24px}.footer{margin-top:50px;border-top:1px solid #ccd9d7;padding-top:15px;color:#667;text-align:center}@media print{main{padding:0}.cover{page-break-after:always}h2{page-break-after:avoid}}
+</style></head><body><main>
+<section class="cover"><div class="sub">CAPSTONE PROJECT · SPRINT 2</div><h1>Container Image Vulnerability Scanner with Reporting</h1><h2 style="color:#72ebda;border-color:#72ebda">CI/CD Vulnerability Gate Integration</h2><p>One policy engine, deterministic tests, GitHub Actions and Jenkins pipelines, stable build exits, and retained security evidence.</p><div class="meta"><p><strong>Repository:</strong> github.com/TabrezAjaz/CapstoneProject</p><p><strong>Branch:</strong> sprint-2</p><p><strong>Scanner:</strong> Trivy 0.74.0 + Python</p><p><strong>Date:</strong> 29 August 2026</p></div></section>
+
+<h2>1. Executive Summary</h2>
+<p>Sprint 2 converts the Sprint 1 scanner into an enforceable CI/CD security gate. A single Python command now resolves configuration, invokes Trivy, saves normalized JSON evidence, evaluates a severity threshold and returns a stable exit status. GitHub Actions and Jenkins call the same command, eliminating policy drift between platforms.</p>
+<div class="callout"><strong>Verified outcome:</strong> GitHub Actions produced both a green passing run and an intentional red policy-blocked run. Deterministic tests passed, and JSON/JUnit evidence remained available from both runs.</div>
+
+<h2>2. Requirement Traceability</h2>
+<table><thead><tr><th>Sprint requirement</th><th>Implementation</th><th>Status</th></tr></thead><tbody>
+<tr><td>Automate new-image scanning in GitHub Actions</td><td><code>.github/workflows/container-scan.yml</code></td><td><span class="badge done">VERIFIED</span></td></tr>
+<tr><td>Automate scanning in Jenkins</td><td><code>ci/Jenkinsfile</code>, parameterized image and threshold</td><td><span class="badge done">IMPLEMENTED</span></td></tr>
+<tr><td>Fail builds by severity</td><td>Python policy evaluates configured minimum severity</td><td><span class="badge done">VERIFIED</span></td></tr>
+<tr><td>Environment-controlled scanning</td><td>Eight documented environment variables with strict validation</td><td><span class="badge done">TESTED</span></td></tr>
+<tr><td>Test with sample images</td><td><code>hello-world:latest</code> pass; <code>alpine:3.19</code> blocked at HIGH</td><td><span class="badge done">VERIFIED</span></td></tr>
+</tbody></table>
+
+<h2>3. Architecture and Data Flow</h2>
+<div class="flow"><div>Push / PR / Parameter</div><i>→</i><div>Python CLI</div><i>→</i><div>Trivy Scan</div></div>
+<div class="flow" style="margin-top:8px"><div>Normalized JSON</div><i>←</i><div>Policy Evaluation</div><i>→</i><div>Pass or Block</div></div>
+<p>The workflow and Jenkinsfile contain orchestration only. Severity counting and threshold decisions remain in <code>scanner/trivy_scanner.py</code>, so identical inputs produce identical decisions on every CI platform.</p>
+
+<h2>4. Policy and Configuration</h2>
+<p>Settings resolve independently using the following precedence:</p>
+<pre>CLI option  &gt;  Environment variable  &gt;  config.yaml  &gt;  safe code default</pre>
+<table><thead><tr><th>Variable</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><code>SCAN_IMAGE</code></td><td>Image supplied by CI</td></tr><tr><td><code>SCANNER_FAIL_ON</code></td><td>LOW, MEDIUM, HIGH or CRITICAL threshold</td></tr>
+<tr><td><code>SCANNER_SEVERITIES</code></td><td>Comma-separated scanned severities</td></tr><tr><td><code>SCANNER_IGNORE_UNFIXED</code></td><td>Include or suppress findings without fixes</td></tr>
+<tr><td><code>SCANNER_PKG_TYPES</code></td><td>Package scope, currently OS packages</td></tr><tr><td><code>SCANNER_TIMEOUT</code></td><td>Bounded Trivy duration</td></tr>
+<tr><td><code>SCANNER_OUTPUT_DIR</code></td><td>Evidence directory</td></tr><tr><td><code>SCANNER_CONFIG</code></td><td>Alternative YAML path</td></tr>
+</tbody></table>
+<p>Severity ordering is UNKNOWN &lt; LOW &lt; MEDIUM &lt; HIGH &lt; CRITICAL. With <code>fail_on: HIGH</code>, HIGH and CRITICAL findings block deployment.</p>
+
+<h2>5. Stable Exit Contract</h2>
+<table><thead><tr><th>Exit</th><th>Meaning</th><th>CI result</th></tr></thead><tbody>
+<tr><td>0</td><td>Scan completed and policy passed</td><td>Green</td></tr><tr><td>1</td><td>Scan completed and threshold was violated</td><td>Intentional red gate</td></tr>
+<tr><td>2</td><td>Invalid CLI or configuration</td><td>Fail closed</td></tr><tr><td>3</td><td>Scanner, registry, timeout, parsing or file failure</td><td>Fail closed</td></tr>
+</tbody></table>
+<p>Policy exit 1 is deliberately distinct from operational exit 3. This prevents a broken scanner from being mistaken for a clean image.</p>
+
+<h2>6. Automated Test Strategy</h2>
+<p>Sixteen tests execute without Docker, a registry or network access. Mocked subprocess calls and synthetic Trivy fixtures validate command construction, null findings, invalid JSON, missing executables, environment precedence, strict booleans, every policy boundary, artifact creation, all four exit codes and multi-image failure priority.</p>
+<pre>python -m pytest -q
+................
+16 passed</pre>
+
+<h2>7. GitHub Actions Integration</h2>
+<p>The workflow supports push, pull request, manual dispatch and reusable workflow invocation. It applies read-only repository permission, cancels superseded runs, installs pinned Trivy, refreshes the database, runs tests, enforces policy, and uploads evidence under <code>if: always()</code>.</p>
+<figure><img src="screenshots/sprint2-github-passed-run.png" alt="Successful GitHub Actions vulnerability gate run"><figcaption>Figure 7.1 — Green smoke path: run #6 completed successfully and retained one evidence artifact.</figcaption></figure>
+<figure><img src="screenshots/sprint2-github-passed-steps.png" alt="All GitHub Actions vulnerability gate steps passed"><figcaption>Figure 7.2 — Checkout, dependencies, Trivy setup, DB refresh, tests, policy enforcement and artifact upload all passed.</figcaption></figure>
+<figure><img src="screenshots/sprint2-github-blocked-run.png" alt="GitHub Actions workflow intentionally blocked by vulnerability policy"><figcaption>Figure 7.3 — Intentional red gate: run #5 exited 1 and still retained one evidence artifact.</figcaption></figure>
+<table><thead><tr><th>Run</th><th>Commit</th><th>Target/path</th><th>Result</th><th>Artifact</th></tr></thead><tbody>
+<tr><td>#6</td><td><code>262597d</code></td><td><code>hello-world:latest</code>, HIGH</td><td><span class="badge done">SUCCESS</span></td><td><code>vulnerability-evidence-6</code></td></tr>
+<tr><td>#5</td><td><code>dbcb571</code></td><td><code>alpine:3.19</code>, HIGH</td><td><span class="badge blocked">POLICY BLOCKED</span></td><td><code>vulnerability-evidence-5</code></td></tr>
+</tbody></table>
+
+<h2>8. Jenkins Integration</h2>
+<p>The declarative pipeline accepts <code>SCAN_IMAGE</code> and <code>SCANNER_FAIL_ON</code> parameters. It checks out source, creates an isolated virtual environment, verifies Trivy, refreshes the CVE database with retry, runs tests, executes the shared policy gate, publishes JUnit and archives JSON even on failure.</p>
+<div class="callout warn"><strong>Agent prerequisite:</strong> configure a Linux Jenkins agent with Python 3 and Trivy 0.74.0, then use Script Path <code>ci/Jenkinsfile</code>. No Jenkins controller is installed on the development workstation, so controller-specific screenshots will be captured when that execution environment is provisioned.</div>
+
+<h2>9. Security, Reliability and Cost</h2>
+<ul><li>Read-only GitHub token permission and no <code>pull_request_target</code>.</li><li>Pinned Trivy and current official action releases.</li><li>No Docker socket mount for registry-reference scans.</li><li>No credentials in image references or repository configuration.</li><li>Configuration is validated and subprocess execution does not use a shell.</li><li>Database caching, concurrency cancellation and 14-day artifact retention limit cost and exposure.</li><li>Open-source Trivy, GitHub-hosted public-repository runners and local Jenkins agents keep incremental cost at zero.</li></ul>
+
+<h2>10. Verification Status</h2>
+<table><thead><tr><th>Check</th><th>Evidence</th><th>Status</th></tr></thead><tbody>
+<tr><td>Python syntax and editor diagnostics</td><td>No errors</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Deterministic test suite</td><td>16/16 passed locally and in GitHub Actions</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Green CI path</td><td>GitHub Actions run #6</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Blocking CI path</td><td>GitHub Actions run #5, exit 1</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Artifacts on red build</td><td><code>vulnerability-evidence-5</code>, expires 11 Sep 2026</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Jenkins live run</td><td>Requires Jenkins agent/controller provisioning</td><td><span class="badge pending">NEXT VALIDATION</span></td></tr>
+</tbody></table>
+
+<h2>11. Conclusion</h2>
+<p>The core Sprint 2 objective is operational: container vulnerability policy is now enforced automatically, configuration is portable, failures are unambiguous, tests are deterministic and evidence survives blocked builds. GitHub Actions is verified end-to-end with positive and negative paths. The same gate is encoded for Jenkins and awaits execution on a provisioned Jenkins environment.</p>
+<div class="footer">Container Image Vulnerability Scanner with Reporting · Sprint 2 · 29 August 2026</div>
+</main></body></html>
