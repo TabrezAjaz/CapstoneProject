@@ -10,7 +10,7 @@ on:
       image:
         description: Container image to scan
         required: true
-        default: alpine:3.19
+        default: hello-world:latest
       fail_on:
         description: Minimum blocking severity
         required: true
@@ -38,7 +38,7 @@ concurrency:
 
 env:
   TRIVY_VERSION: v0.74.0
-  SCAN_IMAGE: ${{ inputs.image || vars.SCAN_IMAGE || 'alpine:3.19' }}
+  SCAN_IMAGE: ${{ inputs.image || vars.SCAN_IMAGE || 'hello-world:latest' }}
   SCANNER_FAIL_ON: ${{ inputs.fail_on || vars.SCANNER_FAIL_ON || 'HIGH' }}
   SCANNER_OUTPUT_DIR: scan-results
 

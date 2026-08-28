@@ -95,6 +95,8 @@ Configuration precedence is **CLI option > environment variable > YAML > code de
 reusable workflow calls. It installs pinned Trivy 0.74.0, refreshes its database, runs tests,
 applies the gate, and uploads JSON/JUnit evidence even when policy blocks the build. Repository
 variables `SCAN_IMAGE` and `SCANNER_FAIL_ON` can override defaults.
+The automatic smoke test uses `hello-world:latest` for a green no-package path; run the workflow
+with `alpine:3.19` and `HIGH` to demonstrate an intentional policy block.
 
 ### Jenkins
 
