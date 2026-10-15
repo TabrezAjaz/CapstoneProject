@@ -1,0 +1,139 @@
+// ==========================================================
+// Sprint 3 — daily / weekly vulnerability summary pipeline.
+//
+// Deploy as TWO Jenkins Pipeline jobs pointing at this file:
+//   1. "CapstoneProject-Sprint3-Summary-Daily"  -> SUMMARY_PERIOD=daily,
+//      Build Triggers -> Build periodically -> `H 2 * * *` with TZ set to UTC.
+//   2. "CapstoneProject-Sprint3-Summary-Weekly" -> SUMMARY_PERIOD=weekly,
+//      Build Triggers -> Build periodically -> `H 3 * * 1` with TZ set to UTC.
+//
+// Each run performs a fresh scan of every image in config.yaml, so the
+// summary always reflects current vulnerabilities. No history database is
+// used; this is deliberately Sprint 4 territory.
+// ==========================================================
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        timeout(time: 90, unit: 'MINUTES')
+        disableConcurrentBuilds(abortPrevious: true)
+    }
+
+    parameters {
+        choice(name: 'SUMMARY_PERIOD', choices: ['daily', 'weekly'], description: 'Summary cadence label used in reports and notifications')
+        booleanParam(name: 'NOTIFY', defaultValue: false, description: 'Send the summary to Slack using the slack-webhook-url credential')
+        choice(name: 'SCANNER_FAIL_ON', choices: ['HIGH', 'CRITICAL', 'MEDIUM', 'LOW'], description: 'Minimum blocking severity recorded in the summary')
+    }
+
+    environment {
+        TRIVY_VERSION = '0.74.0'
+        SCANNER_OUTPUT_DIR = 'scan-results'
+        REPORT_OUTPUT_DIR = 'reports'
+        SCANNER_TIMEOUT = '15m'
+        SCANNER_FAIL_ON = "${params.SCANNER_FAIL_ON}"
+        TZ = 'UTC'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Environment') {
+            steps {
+                sh '''
+                    rm -rf .ci-python .tools
+                    mkdir -p .ci-python .tools
+                    python3 -m pip install --disable-pip-version-check --target .ci-python -r requirements-dev.txt
+                    curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+                      | tar -xz -C .tools trivy
+                    .tools/trivy --version
+                '''
+            }
+        }
+
+        stage('Refresh vulnerability DB') {
+            steps {
+                retry(2) {
+                    sh '.tools/trivy image --download-db-only'
+                }
+            }
+        }
+
+        stage('Scan configured images') {
+            steps {
+                script {
+                    env.SCAN_EXIT = sh(
+                        script: 'PATH="$WORKSPACE/.tools:$PATH" PYTHONPATH=.ci-python python3 -m scanner.trivy_scanner --all-configured',
+                        returnStatus: true
+                    ).toString()
+                    echo "Scanner exit code: ${env.SCAN_EXIT}"
+                }
+            }
+        }
+
+        stage('Generate summary report') {
+            steps {
+                sh '''
+                    shopt -s nullglob
+                    artifacts=(scan-results/*-????????.json)
+                    if [ ${#artifacts[@]} -eq 0 ]; then
+                        echo "No normalized scan artifacts found; summary generation skipped."
+                        exit 0
+                    fi
+                    PERIOD_TITLE="$(echo "${SUMMARY_PERIOD}" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+                    PYTHONPATH=.ci-python python3 -m reporters.cli "${artifacts[@]}" \
+                      --period "${SUMMARY_PERIOD}" --formats json,html,pdf --output-dir reports \
+                      --title "${PERIOD_TITLE} Container Vulnerability Summary"
+                '''
+            }
+        }
+
+        stage('Notify Slack') {
+            when { expression { return params.NOTIFY } }
+            steps {
+                withCredentials([string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')]) {
+                    sh '''
+                        shopt -s nullglob
+                        canonical=()
+                        for candidate in reports/*.json; do
+                            case "$candidate" in
+                                *.manifest.json) ;;
+                                *) canonical+=("$candidate") ;;
+                            esac
+                        done
+                        if [ ${#canonical[@]} -eq 0 ]; then
+                            echo "No canonical report found; Slack summary skipped."
+                            exit 0
+                        fi
+                        PYTHONPATH=.ci-python python3 -m notifiers.cli "${canonical[0]}" --always
+                    '''
+                }
+            }
+        }
+
+        stage('Enforce summary result') {
+            steps {
+                script {
+                    // Summary cadence reports vulnerabilities by design, so a policy
+                    // block (1) is a valid result. Only operational failures (2/3) fail
+                    // the summary job.
+                    if (env.SCAN_EXIT != '0' && env.SCAN_EXIT != '1') {
+                        error("Summary scan failed with operational exit code ${env.SCAN_EXIT}")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'scan-results/*.json', fingerprint: true
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/*', fingerprint: true
+        }
+        cleanup {
+            deleteDir()
+        }
+    }
+}

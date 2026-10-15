@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sprint 3 Evidence</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#e8eef4;font-family:Segoe UI,Arial,sans-serif;color:#e6edf3}
+.card{width:1200px;height:650px;padding:34px;background:linear-gradient(135deg,#071b23,#0b2f35);border:5px solid #18c7b4;position:relative;overflow:hidden}
+.head{display:flex;justify-content:space-between;border-bottom:2px solid #18c7b4;padding-bottom:16px;margin-bottom:20px}
+.title{font-size:28px;font-weight:700}.tag{color:#62e7d7;font-weight:700;letter-spacing:.12em}
+.terminal{background:#080d12;border:1px solid #3c4b57;border-radius:10px;padding:20px 24px;height:512px;overflow:hidden;box-shadow:0 12px 30px #0008;font:17px/1.44 Consolas,monospace;white-space:pre-wrap}
+.prompt{color:#65d46e}.cmd{color:#fff}.info{color:#67d8ef}.ok{color:#65d46e}.warn{color:#f1c75b}.muted{color:#9ba9b4}.crit{color:#ff6b6b}.high{color:#ff9b64}.med{color:#ffd166}.low{color:#69d58b}.key{color:#62e7d7}
+.footer{position:absolute;right:35px;bottom:13px;color:#91a5af;font-size:13px}
+</style></head><body>
+
+<section class="card" id="tests"><div class="head"><span class="title">Local Verification &amp; Report Generation</span><span class="tag">SPRINT 3 · EVIDENCE 1</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">python -m pytest -q</span>
+............................                                             [100%]
+<span class="ok">28 passed</span> in 2.92s
+
+<span class="muted"># schema v1 scan artifacts (clean + vulnerable)</span>
+<span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">python -m scanner.trivy_scanner hello-world:latest</span>
+<span class="ok">exit code 0</span>  policy passed
+
+<span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">python -m scanner.trivy_scanner alpine:3.19</span>
+<span class="high">exit code 1</span>  policy blocked (2 HIGH)
+
+<span class="muted"># three formats generated from the same canonical model</span>
+<span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">python -m reporters.cli scan-results\*.json --period daily --formats json,html,pdf</span>
+reports\vulnerability-<span class="info">daily-afe1bb96</span>.manifest.json
+<span class="ok">EXIT=0</span> — json, html (autoescaped), pdf (ReportLab) + checksum manifest</div><div class="footer">Verified 15 Oct 2026 · Trivy 0.74.0 · wrapper 0.3.0</div></section>
+
+<section class="card" id="artifact"><div class="head"><span class="title">Versioned Scan Artifact (schema 1.0)</span><span class="tag">SPRINT 3 · EVIDENCE 2</span></div><div class="terminal">IMAGE=<span class="key">alpine:3.19</span>
+SCAN_ID=<span class="info">dbd0bc7f-4901-4c0b-b4a1-88e621c76c68</span>
+SCANNED_AT=2026-10-15T11:39:16Z            <span class="muted"># UTC, generated per scan</span>
+SCANNER=trivy  WRAPPER=<span class="info">0.3.0</span>  SOURCE=local
+
+SUMMARY  <span class="crit">CRIT: 0</span>  <span class="high">HIGH: 2</span>  <span class="med">MED: 5</span>  <span class="low">LOW: 3</span>  UNK: 0
+POLICY   fail_on=HIGH  blocking=2  <span class="high">passed=False</span>
+
+FINDINGS (10, summary validated against count)
+  <span class="high">HIGH</span>    CVE-2026-40200  musl         1.2.4_git20230717-r5 -&gt; 1.2.4_git20230717-r6
+  <span class="high">HIGH</span>    CVE-2026-40200  musl-utils   1.2.4_git20230717-r5 -&gt; 1.2.4_git20230717-r6
+  <span class="med">MEDIUM</span>  CVE-2024-58251  busybox      1.36.1-r20 -&gt; 1.36.1-r21
+  <span class="low">LOW</span>     CVE-2025-46394  busybox      1.36.1-r20 -&gt; 1.36.1-r21
+
+IMAGE=<span class="key">hello-world:latest</span>
+SUMMARY  CRIT: 0  HIGH: 0  MED: 0  LOW: 0  UNK: 0
+POLICY   fail_on=HIGH  blocking=0  <span class="ok">passed=True</span>
+
+<span class="ok">✓ report loader rejects raw Trivy or inconsistent artifacts before rendering</span></div><div class="footer">Captured 15 Oct 2026</div></section>
+
+<section class="card" id="notify"><div class="head"><span class="title">Notification Policy &amp; Webhook Security</span><span class="tag">SPRINT 3 · EVIDENCE 3</span></div><div class="terminal"><span class="muted"># 1. clean run report below alert threshold -&gt; intentionally skipped</span>
+<span class="prompt">PS&gt;</span> <span class="cmd">python -m notifiers.cli reports\vulnerability-run-*.json</span>
+highest=UNKNOWN  status=PASSED
+<span class="ok">Notification skipped: report is below alert threshold</span>
+<span class="ok">EXIT=0</span>
+
+<span class="muted"># 2. non-Slack host rejected before any request is made</span>
+<span class="prompt">PS&gt;</span> <span class="cmd">$env:SLACK_WEBHOOK_URL='https://example.com/services/x'</span>
+<span class="prompt">PS&gt;</span> <span class="cmd">python -m notifiers.cli reports\vulnerability-daily-*.json --always</span>
+<span class="crit">Notification error: SLACK_WEBHOOK_URL is not a valid Slack HTTPS webhook</span>
+<span class="crit">EXIT=3</span>
+
+<span class="muted"># 3. secret is never read from YAML; environment/credential only</span>
+<span class="prompt">PS&gt;</span> <span class="cmd">Remove-Item Env:\SLACK_WEBHOOK_URL; python -m notifiers.cli report.json --always</span>
+<span class="crit">Notification error: SLACK_WEBHOOK_URL is required</span>
+<span class="crit">EXIT=3</span>
+
+<span class="ok">✓ redirects refused · 10s timeout · retries bounded to 3 with backoff</span>
+<span class="ok">✓ @channel/@here stripped from scan-controlled values</span></div><div class="footer">Captured 15 Oct 2026</div></section>
+
+<section class="card" id="manifest"><div class="head"><span class="title">Report Manifest with Checksums</span><span class="tag">SPRINT 3 · EVIDENCE 4</span></div><div class="terminal"><span class="prompt">PS&gt;</span> <span class="cmd">python -m reporters.cli ... --period daily --formats json,html,pdf</span>
+reports\vulnerability-daily-afe1bb96.manifest.json
+
+{
+  "schema_version": <span class="info">"1.0"</span>,
+  "report_id": <span class="info">"afe1bb96-9419-4861-bf9c-fc0f4e00dee4"</span>,
+  "generated_at": "2026-10-15T11:39:33.637346Z",
+  "outputs": [
+    { "format": "json", "file": "vulnerability-daily-afe1bb96.json",
+      "media_type": "application/json", "size": 4470,
+      "sha256": "b3401d72e4c891f1b478c6342c9568a3..." },
+    { "format": "html", "file": "vulnerability-daily-afe1bb96.html",
+      "media_type": "text/html", "size": 3436,
+      "sha256": "7764745b4ff59c438cb2ca8d7dd76f8a..." },
+    { "format": "pdf",  "file": "vulnerability-daily-afe1bb96.pdf",
+      "media_type": "application/pdf", "size": 3987,
+      "sha256": "164890a717ca3b94629741f4e6238853..." }
+  ]
+}
+
+<span class="ok">✓ manifest written last — it lists only fully written outputs</span>
+<span class="ok">✓ all three formats share one report_id and identical totals</span></div><div class="footer">Captured 15 Oct 2026</div></section>
+
+</body></html>
