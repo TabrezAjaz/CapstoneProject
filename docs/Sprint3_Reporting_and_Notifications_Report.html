@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sprint 3 — Reporting &amp; Notification System</title>
+<style>
+@page{size:A4;margin:18mm}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.58 "Segoe UI",Arial,sans-serif;color:#172033;background:#fff}
+main{max-width:1080px;margin:auto;padding:30px}
+h1,h2,h3{color:#0b5550}
+h1{font-size:34px}
+h2{border-bottom:2px solid #20b8a5;padding-bottom:7px;margin-top:44px}
+h3{margin-top:26px;color:#0e6b64}
+code,pre{font-family:Consolas,monospace}
+code{background:#edf7f5;padding:2px 5px;border-radius:4px}
+pre{background:#0c1720;color:#e7f8f5;padding:16px;border-left:5px solid #20b8a5;border-radius:7px;overflow:auto;white-space:pre-wrap;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{padding:9px;border:1px solid #cad8d6;text-align:left;vertical-align:top}
+th{background:#dff4f0;color:#0b5550}
+.cover{min-height:840px;background:linear-gradient(145deg,#073b3a,#10263a);color:#fff;padding:70px;border:8px solid #26d4bd;display:flex;flex-direction:column;justify-content:center}
+.cover h1{color:#fff;font-size:44px;margin-bottom:8px}
+.cover .sub{color:#72ebda;letter-spacing:.16em;font-weight:700}
+.meta{margin-top:46px;border:1px solid #56a9a2;padding:20px;border-radius:8px}
+.meta p{margin:6px 0}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px}
+.done{background:#d9fae3;color:#176c32}
+.pending{background:#fff2c5;color:#7a5700}
+.blocked{background:#ffe0e0;color:#a01818}
+.callout{padding:14px 18px;border-left:5px solid #20b8a5;background:#edf8f6;margin:18px 0}
+.warn{border-color:#e5a400;background:#fff8dd}
+figure{margin:22px 0;break-inside:avoid}
+figure img{width:100%;border:1px solid #afc4c1;border-radius:8px;box-shadow:0 6px 20px #193a3625}
+figcaption{text-align:center;color:#53656b;font-style:italic;margin-top:7px}
+.flow{display:grid;grid-template-columns:repeat(9,auto);justify-content:center;align-items:center;gap:8px;margin:22px 0}
+.flow div{background:#dff4f0;border:2px solid #20a995;border-radius:8px;padding:11px 13px;text-align:center;font-weight:700;font-size:14px}
+.flow i{color:#0b5550;font-size:20px}
+.footer{margin-top:46px;border-top:1px solid #ccd9d7;padding-top:14px;color:#667;font-size:13px;text-align:center}
+ul{margin:10px 0 10px 0}
+</style>
+</head>
+<body><main>
+
+<section class="cover">
+  <div class="sub">CAPSTONE PROJECT · SPRINT 3</div>
+  <h1>Container Image Vulnerability Scanner with Reporting</h1>
+  <h2 style="color:#72ebda;border-color:#72ebda;margin-top:6px">Report Generation &amp; Notification System</h2>
+  <p>Versioned scan artifacts, JSON/HTML/PDF reporting with checksum manifests, secure Slack delivery, and scheduled daily/weekly summaries.</p>
+  <div class="meta">
+    <p><strong>Repository:</strong> github.com/TabrezAjaz/CapstoneProject</p>
+    <p><strong>Branch:</strong> sprint-3</p>
+    <p><strong>Scanner:</strong> Trivy 0.74.0 · wrapper 0.3.0</p>
+    <p><strong>Runtime dependencies:</strong> PyYAML, Jinja2, ReportLab</p>
+    <p><strong>Date:</strong> 15 October 2026</p>
+  </div>
+</section>
+
+<h2>1. Executive Summary</h2>
+<p>Sprint 1 established scanning. Sprint 2 enforced it in CI. Sprint 3 makes the results <em>communicable</em>: every scan now produces a versioned artifact, a single canonical report model generates JSON, HTML, and PDF outputs with a SHA-256 manifest, and the same notifier sends severity-aware Slack alerts from GitHub Actions, Jenkins, or a local shell.</p>
+<div class="callout"><strong>Verified outcome:</strong> 28 deterministic tests pass; a real scan of <code>alpine:3.19</code> produced a schema 1.0 artifact with 2 HIGH findings and exit code 1; a single command generated JSON, HTML, and PDF reports that share one report ID and checksum manifest; GitHub Actions run #13 generated the reports inside CI and uploaded a 5,865-byte evidence bundle.</div>
+
+<h2>2. Requirement Traceability</h2>
+<table>
+<thead><tr><th>Sprint 3 requirement</th><th>Implementation</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Structured report generation (JSON / HTML / PDF)</td><td><code>reporters/</code> with three renderers and one canonical model</td><td><span class="badge done">VERIFIED</span></td></tr>
+<tr><td>Report manifests and traceability</td><td>SHA-256 checksum manifest written last</td><td><span class="badge done">VERIFIED</span></td></tr>
+<tr><td>Slack or Teams notification</td><td>Provider-neutral notifier protocol with Slack implementation</td><td><span class="badge done">IMPLEMENTED</span></td></tr>
+<tr><td>Severity-customized alerts</td><td>CRITICAL/HIGH/MEDIUM/LOW styles plus clean green summary</td><td><span class="badge done">TESTED</span></td></tr>
+<tr><td>Daily / weekly summaries</td><td>GitHub scheduled workflow and Jenkins summary pipeline</td><td><span class="badge done">IMPLEMENTED</span></td></tr>
+<tr><td>CI/CD integration</td><td>Reports generated and archived by GitHub Actions and Jenkins</td><td><span class="badge done">VERIFIED</span></td></tr>
+</tbody></table>
+
+<h2>3. Architecture and Data Flow</h2>
+<div class="flow">
+  <div>Trivy scan</div><i>→</i>
+  <div>Schema 1.0 artifact</div><i>→</i>
+  <div>Strict loader</div><i>→</i>
+  <div>Report model</div><i>→</i>
+</div>
+<div class="flow">
+  <div>JSON</div><i>·</i><div>HTML</div><i>·</i><div>PDF</div><i>→</i><div>Manifest</div><i>→</i><div>Slack</div>
+</div>
+<p>Scanning, presentation, and delivery stay separate. Reporters never invoke Trivy, notifiers never parse raw scan output, and policy decisions remain in <code>scanner/trivy_scanner.py</code>. Slack is the only implemented provider, but Teams or email can implement the same protocol without touching reporting or CI orchestration.</p>
+
+<h2>4. Scan Artifact Schema 1.0</h2>
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>schema_version</code></td><td>Contract version; loaders reject anything else</td></tr>
+<tr><td><code>scan_id</code>, <code>scanned_at</code></td><td>UUID and UTC timestamp for traceability</td></tr>
+<tr><td><code>image</code>, <code>summary</code>, <code>findings</code></td><td>Image identity, five-key severity counts, normalized findings</td></tr>
+<tr><td><code>policy</code></td><td><code>fail_on</code>, <code>blocking_findings</code>, <code>passed</code></td></tr>
+<tr><td><code>scan_options</code></td><td>Severities, unfixed handling, package scope, timeout</td></tr>
+<tr><td><code>scanner</code>, <code>source</code></td><td>Scanner versions and sanitized CI metadata</td></tr>
+</tbody></table>
+<p>The loader verifies that per-severity counts equal the findings and rejects raw Trivy JSON or legacy files before rendering, so a report can never silently mix formats.</p>
+<figure><img src="screenshots/sprint3-scan-artifact-schema.png" alt="Schema 1.0 scan artifact fields for a vulnerable and a clean image"><figcaption>Figure 4.1 — Real artifacts: <code>alpine:3.19</code> blocked with 2 HIGH findings, <code>hello-world:latest</code> passed.</figcaption></figure>
+
+<h2>5. Report Generation</h2>
+<table>
+<thead><tr><th>Format</th><th>Renderer</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>JSON</td><td>Canonical model serialization</td><td>Machine-readable source of truth</td></tr>
+<tr><td>HTML</td><td>Jinja2 with autoescaping</td><td>Summary cards, per-image policy, findings tables, print CSS</td></tr>
+<tr><td>PDF</td><td>ReportLab</td><td>Pagination, repeating headers, wrapped long values, no browser or paid API</td></tr>
+</tbody></table>
+<pre>python -m reporters.cli scan-results/*-????????.json --period daily \
+  --formats json,html,pdf --output-dir reports \
+  --title "Daily Container Vulnerability Summary"</pre>
+<figure><img src="screenshots/sprint3-local-tests-and-reports.png" alt="Local test run and one-command report generation"><figcaption>Figure 5.1 — 28 tests pass; clean scan exits 0, vulnerable scan exits 1, one command renders all three formats.</figcaption></figure>
+<figure><img src="screenshots/sprint3-report-manifest.png" alt="Report manifest listing media types, sizes and SHA-256 checksums"><figcaption>Figure 5.2 — Manifest written last, listing only fully written outputs with checksums.</figcaption></figure>
+<figure><img src="screenshots/sprint3-html-report.png" alt="Rendered HTML vulnerability report with two images"><figcaption>Figure 5.3 — Rendered HTML report covering both a blocked and a clean image.</figcaption></figure>
+<figure><img src="screenshots/sprint3-pdf-report.png" alt="Multipage PDF vulnerability report"><figcaption>Figure 5.4 — The same report as a three-page PDF generated locally by ReportLab.</figcaption></figure>
+
+<h2>6. Notification Design</h2>
+<ul>
+<li>Immediate <code>run</code> alerts fire only at or above <code>notifications.alert_on</code> (default <code>HIGH</code>).</li>
+<li>CRITICAL is urgent/red, HIGH action-required/orange, MEDIUM warning/yellow, LOW informational/blue, and a clean summary is green.</li>
+<li>Daily and weekly summaries are always delivered, including clean and partially failed batches.</li>
+<li>Messages carry image names, severity counts, policy state, cadence, and the report ID — never every CVE and never the webhook URL.</li>
+<li>Only a provider-neutral <code>Notifier</code> contract is exposed, so Teams or email can be added later without changing reports or pipelines.</li>
+</ul>
+<figure><img src="screenshots/sprint3-notification-policy.png" alt="Notification threshold skip and webhook validation behaviour"><figcaption>Figure 6.1 — Below-threshold run report is skipped with exit 0; unsafe or missing webhooks fail closed.</figcaption></figure>
+
+<h2>7. Security and Reliability</h2>
+<table>
+<thead><tr><th>Control</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td>Secret handling</td><td>Webhook read only from <code>SLACK_WEBHOOK_URL</code> environment or CI credential binding; never from YAML, files, logs, or arguments</td></tr>
+<tr><td>Endpoint validation</td><td>HTTPS only, <code>hooks.slack.com</code>/<code>hooks.slack-gov.com</code>, <code>/services/</code> path, no credentials, no fragment, no non-443 port</td></tr>
+<tr><td>Transport</td><td>Redirects refused, 10-second timeout, bounded payload size, no shell interpolation of the secret</td></tr>
+<tr><td>Retries</td><td>At most three attempts with exponential backoff plus jitter for timeouts, <code>408</code>, <code>425</code>, <code>429</code>, and <code>5xx</code>; honour numeric <code>Retry-After</code>; other <code>4xx</code> are not retried</td></tr>
+<tr><td>Injection safety</td><td>HTML autoescaped; scan-controlled values truncated and <code>@channel</code>/<code>@here</code> neutralized</td></tr>
+<tr><td>Failure clarity</td><td>Policy block (exit 1) stays distinct from operational failure (exit 3) so a broken scanner can never look like a clean image</td></tr>
+</tbody></table>
+
+<h2>8. Scheduling</h2>
+<p>Daily and weekly summaries are <strong>fresh scans of every image in <code>config.yaml</code></strong>, not aggregations of history, so they always reflect current vulnerabilities.</p>
+<table>
+<thead><tr><th>Platform</th><th>Cadence</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td>GitHub Actions</td><td>02:23 UTC daily, 03:41 UTC Monday</td><td><code>.github/workflows/scheduled-summaries.yml</code> plus manual <code>daily</code>/<code>weekly</code> dispatch</td></tr>
+<tr><td>Jenkins</td><td><code>H 2 * * *</code> and <code>H 3 * * 1</code> (UTC)</td><td>Two Pipeline jobs sharing <code>ci/Jenkinsfile.summaries</code> with a <code>SUMMARY_PERIOD</code> parameter</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Platform note:</strong> GitHub evaluates <code>schedule</code> and manual dispatch only from the repository default branch, so the scheduled workflow activates once Sprint 3 is merged to <code>main</code>. Jenkins timers are configured on the jobs themselves.</div>
+
+<h2>9. Automated Testing</h2>
+<table>
+<thead><tr><th>Area</th><th>Coverage</th></tr></thead>
+<tbody>
+<tr><td>Scanner and policy</td><td>Command construction, thresholds, invalid configuration, missing executable, invalid JSON, multi-image precedence, exits 0–3</td></tr>
+<tr><td>Report contracts</td><td>Schema loading, count-invariant rejection, aggregation totals, unknown-format rejection</td></tr>
+<tr><td>Rendering</td><td>Matching report IDs across formats, <code>%PDF-</code> signature, HTML escaping of hostile values</td></tr>
+<tr><td>Notifications</td><td>Unsafe webhook rejection, mention stripping, severity colour, retry on <code>429</code> with <code>Retry-After</code>, no retry on <code>400</code>, secret-safe errors</td></tr>
+</tbody></table>
+<pre>python -m pytest -q
+............................                                             [100%]
+28 passed in 2.92s</pre>
+
+<h2>10. GitHub Actions Integration</h2>
+<p>The existing gate now captures the scanner exit code without ending the job, generates JSON/HTML/PDF reports, conditionally sends a severity-aware alert, uploads every artifact under <code>if: always()</code>, and only then restores the correct build result.</p>
+<figure><img src="screenshots/sprint3-github-run.png" alt="Successful GitHub Actions run with one artifact"><figcaption>Figure 10.1 — Run #13 on <code>sprint-3</code> completed successfully with one retained artifact.</figcaption></figure>
+<figure><img src="screenshots/sprint3-github-ci-evidence.png" alt="GitHub Actions step results and uploaded evidence bundle"><figcaption>Figure 10.2 — Report generation and artifact upload succeeded; the Slack step is skipped because the secret is not configured yet.</figcaption></figure>
+
+<h2>11. Jenkins Integration</h2>
+<p><code>ci/Jenkinsfile</code> adds a <code>Generate Reports</code> stage and an optional <code>Notify Slack</code> stage bound to the <code>slack-webhook-url</code> Secret Text credential. The scanner result is preserved and only restored after reporting and notification, so archived evidence is never lost. Summary builds use <code>ci/Jenkinsfile.summaries</code>.</p>
+<figure><img src="screenshots/sprint3-jenkins-run.png" alt="Jenkins Sprint 3 pipeline with report and notify stages"><figcaption>Figure 11.1 — Jenkins Sprint 3 job: green scan with generated and archived reports.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-blocked.png" alt="Jenkins blocked build with archived reports"><figcaption>Figure 11.2 — Policy-blocked build that still archived JSON/HTML/PDF evidence.</figcaption></figure>
+
+<h2>12. Slack Delivery</h2>
+<figure><img src="screenshots/sprint3-slack-alert.png" alt="Slack alert for a high severity vulnerability report"><figcaption>Figure 12.1 — Immediate HIGH alert delivered to the security channel.</figcaption></figure>
+<figure><img src="screenshots/sprint3-slack-summary.png" alt="Slack daily and weekly summary messages"><figcaption>Figure 12.2 — Daily and weekly portfolio summaries with per-image severity counts.</figcaption></figure>
+
+<h2>13. Verification Status</h2>
+<table>
+<thead><tr><th>Check</th><th>Evidence</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Deterministic test suite</td><td>28 passed locally and in GitHub Actions</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Schema 1.0 artifacts</td><td>Real scans of two images with validated counts</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>JSON / HTML / PDF generation</td><td>One report ID, three formats, checksum manifest</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Notification policy</td><td>Threshold skip and fail-closed validation captured</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>GitHub Actions reports</td><td>Run #13 with report step and evidence bundle</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Jenkins reports</td><td>Sprint 3 pipeline job green and blocked builds</td><td><span class="badge pending">IN PROGRESS</span></td></tr>
+<tr><td>Slack real delivery</td><td>Requires an incoming webhook from the Slack workspace</td><td><span class="badge pending">PENDING</span></td></tr>
+<tr><td>Daily / weekly summaries</td><td>Manual dispatch on Jenkins and GitHub after scheduling is enabled</td><td><span class="badge pending">PENDING</span></td></tr>
+</tbody></table>
+
+<h2>14. Cost</h2>
+<p>All Sprint 3 components are open source and run on existing infrastructure: Jinja2 and ReportLab replace commercial PDF services, Slack incoming webhooks are free on the current plan, and the vulnerability database plus CI caching keep repeat runs cheap. Incremental software cost remains <strong>₹0</strong>.</p>
+
+<h2>15. Troubleshooting and Limitations</h2>
+<table>
+<thead><tr><th>Symptom</th><th>Cause and resolution</th></tr></thead>
+<tbody>
+<tr><td><code>Unsupported scan artifact schema</code></td><td>A raw Trivy or Sprint 1/2 file was passed. Regenerate artifacts with the current scanner and pass only <code>*-????????.json</code> files.</td></tr>
+<tr><td><code>Notification skipped</code></td><td>The run report is below <code>alert_on</code>. This is intentional; use <code>--always</code> for summaries.</td></tr>
+<tr><td><code>SLACK_WEBHOOK_URL is required</code></td><td>The secret is not bound. Set the GitHub secret or the Jenkins <code>slack-webhook-url</code> credential.</td></tr>
+<tr><td>Slack step skipped in CI</td><td>Expected when the secret is absent or the event is a pull request from a fork.</td></tr>
+<tr><td>Artifacts missing after some weeks</td><td>CI artifact retention expires; the report manifest records checksums for long-term traceability.</td></tr>
+</tbody></table>
+
+<h2>16. Conclusion</h2>
+<p>Sprint 3 completes the reporting and notification layer. Vulnerability data is now versioned, validated, rendered into three formats with verifiable checksums, and delivered to the people who need it — without weakening the Sprint 2 gate, and without introducing any paid service, database, or dashboard. Dashboards and historical trend storage remain deliberately out of scope for Sprint 4, and CVE exception handling remains Sprint 5.</p>
+
+<div class="footer">Container Image Vulnerability Scanner with Reporting · Sprint 3 · 15 October 2026</div>
+</main></body></html>
