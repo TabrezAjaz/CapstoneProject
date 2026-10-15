@@ -10,6 +10,7 @@ pipeline {
     parameters {
         string(name: 'SCAN_IMAGE', defaultValue: 'alpine:3.19', description: 'Container image reference')
         choice(name: 'SCANNER_FAIL_ON', choices: ['HIGH', 'CRITICAL', 'MEDIUM', 'LOW'], description: 'Minimum blocking severity')
+        booleanParam(name: 'NOTIFY', defaultValue: false, description: 'Send the vulnerability summary to Slack using the slack-webhook-url credential')
     }
 
     environment {
@@ -64,7 +65,39 @@ pipeline {
         stage('Generate Reports') {
             when { expression { fileExists('scan-results') } }
             steps {
-                sh 'PYTHONPATH=.ci-python python3 -m reporters.cli scan-results/*-????????.json --formats json,html,pdf --output-dir reports'
+                sh '''
+                    shopt -s nullglob
+                    artifacts=(scan-results/*-????????.json)
+                    if [ ${#artifacts[@]} -eq 0 ]; then
+                        echo "No normalized scan artifacts found; report generation skipped."
+                        exit 0
+                    fi
+                    PYTHONPATH=.ci-python python3 -m reporters.cli "${artifacts[@]}" --formats json,html,pdf --output-dir reports
+                '''
+            }
+        }
+
+        stage('Notify Slack') {
+            when { expression { return params.NOTIFY } }
+            steps {
+                withCredentials([string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')]) {
+                    sh '''
+                        shopt -s nullglob
+                        reports=(reports/*.json)
+                        canonical=()
+                        for candidate in "${reports[@]}"; do
+                            case "$candidate" in
+                                *.manifest.json) ;;
+                                *) canonical+=("$candidate") ;;
+                            esac
+                        done
+                        if [ ${#canonical[@]} -eq 0 ]; then
+                            echo "No canonical report found; Slack notification skipped."
+                            exit 0
+                        fi
+                        PYTHONPATH=.ci-python python3 -m notifiers.cli "${canonical[0]}"
+                    '''
+                }
             }
         }
 
