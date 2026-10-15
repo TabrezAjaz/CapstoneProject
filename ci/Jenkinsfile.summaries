@@ -76,14 +76,13 @@ pipeline {
         stage('Generate summary report') {
             steps {
                 sh '''
-                    shopt -s nullglob
-                    artifacts=(scan-results/*-????????.json)
-                    if [ ${#artifacts[@]} -eq 0 ]; then
+                    artifacts=$(ls scan-results/*-????????.json 2>/dev/null || true)
+                    if [ -z "$artifacts" ]; then
                         echo "No normalized scan artifacts found; summary generation skipped."
                         exit 0
                     fi
                     PERIOD_TITLE="$(echo "${SUMMARY_PERIOD}" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
-                    PYTHONPATH=.ci-python python3 -m reporters.cli "${artifacts[@]}" \
+                    PYTHONPATH=.ci-python python3 -m reporters.cli $artifacts \
                       --period "${SUMMARY_PERIOD}" --formats json,html,pdf --output-dir reports \
                       --title "${PERIOD_TITLE} Container Vulnerability Summary"
                 '''
@@ -95,19 +94,12 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')]) {
                     sh '''
-                        shopt -s nullglob
-                        canonical=()
-                        for candidate in reports/*.json; do
-                            case "$candidate" in
-                                *.manifest.json) ;;
-                                *) canonical+=("$candidate") ;;
-                            esac
-                        done
-                        if [ ${#canonical[@]} -eq 0 ]; then
+                        canonical=$(ls reports/*.json 2>/dev/null | grep -v '\\.manifest\\.json$' | head -n 1 || true)
+                        if [ -z "$canonical" ]; then
                             echo "No canonical report found; Slack summary skipped."
                             exit 0
                         fi
-                        PYTHONPATH=.ci-python python3 -m notifiers.cli "${canonical[0]}" --always
+                        PYTHONPATH=.ci-python python3 -m notifiers.cli "$canonical" --always
                     '''
                 }
             }
