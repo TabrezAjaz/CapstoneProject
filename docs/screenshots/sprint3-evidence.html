@@ -115,4 +115,45 @@ test-results/junit.xml                  <span class="muted"># test evidence</spa
 
 <span class="ok">✓ reports are produced and uploaded even when the gate blocks</span></div><div class="footer">Run 13 · 15 Oct 2026 · retention 30 days</div></section>
 
+<section class="card" id="jenkins"><div class="head"><span class="title">Jenkins — Report Generation in CI</span><span class="tag">SPRINT 3 · EVIDENCE 6</span></div><div class="terminal"><span class="muted"># job TabrezAjaz-CapstoneProject-Sprint3 · ci/Jenkinsfile · branch */sprint-3 · rev d047827</span>
+<span class="muted"># build #2 — hello-world:latest</span>
+[Vulnerability Gate]  <span class="ok">POLICY PASSED image=hello-world:latest</span>
+[Generate Reports]    <span class="ok">reports/vulnerability-run-90e45df0.{json,html,pdf,manifest.json}</span>
+Build Artifacts  vulnerability-run-90e45df0.html          1.91 KiB
+                 vulnerability-run-90e45df0.json          1.78 KiB
+                 vulnerability-run-90e45df0.manifest.json   829 B
+                 vulnerability-run-90e45df0.pdf           2.61 KiB
+                 hello-world_latest-e6c1104d.json            871 B
+Tests (no failures)
+Finished: <span class="ok">SUCCESS</span>
+
+<span class="muted"># build #3 — alpine:3.19 (intentional policy block)</span>
+[Vulnerability Gate]  summary={'CRITICAL': 0, <span class="high">'HIGH': 2</span>, 'MEDIUM': 5, 'LOW': 3, 'UNKNOWN': 0}
+[Vulnerability Gate]  <span class="crit">ERROR POLICY BLOCKED image=alpine:3.19 blocking_findings=2</span>
+[Generate Reports]    <span class="muted">+ ls scan-results/alpine_3.19-6bd2275d.json</span>
+Build Artifacts  vulnerability-run-4d85a000.html/.json/.pdf/.manifest.json
+                 alpine_3.19-6bd2275d.json                2.45 KiB
+Finished: <span class="crit">FAILURE</span>   <span class="ok">✓ reports archived despite the blocked gate</span></div><div class="footer">Jenkins 2.555.3 · builds #2 and #3 · 15 Oct 2026</div></section>
+
+<section class="card" id="schedule"><div class="head"><span class="title">Scheduled Daily &amp; Weekly Summaries</span><span class="tag">SPRINT 3 · EVIDENCE 7</span></div><div class="terminal"><span class="muted"># Jenkins · two jobs sharing ci/Jenkinsfile.summaries (TZ=UTC)</span>
+<span class="key">...-Sprint3-Summary-Daily</span>     Build periodically: <span class="info">H 2 * * *</span>
+<span class="key">...-Sprint3-Summary-Weekly</span>    Build periodically: <span class="info">H 3 * * 1</span>
+
+Would last have run at Thursday, October 15, 2026, 2:33:00 AM Coordinated Universal Time;
+would next run at Friday, October 16, 2026, 2:33:00 AM Coordinated Universal Time.
+
+<span class="muted"># build #1 — daily summary (fresh scan of all 4 configured images)</span>
+Build Artifacts  vulnerability-<span class="info">daily</span>-7a66d52e.html/.json/.pdf/.manifest.json
+                 alpine_3.19-6bd2275d.json          nginx_latest-28327d2d.json
+                 node_18-ce0e73d6.json              python_3.12-slim-1d044754.json
+Finished: <span class="ok">SUCCESS</span>   (59 sec)
+
+<span class="muted"># build #1 — weekly summary</span>
+Build Artifacts  vulnerability-<span class="info">weekly</span>-7bf868f6.html/.json/.pdf/.manifest.json
+                 alpine_3.19-6bd2275d.json          nginx_latest-28327d2d.json
+                 node_18-ce0e73d6.json              python_3.12-slim-1d044754.json
+Finished: <span class="ok">SUCCESS</span>   (40 sec)
+
+<span class="ok">✓ each cadence rescans the whole portfolio instead of aggregating history</span></div><div class="footer">Jenkins 2.555.3 · 15 Oct 2026</div></section>
+
 </body></html>
