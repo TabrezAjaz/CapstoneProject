@@ -166,8 +166,15 @@ ul{margin:10px 0 10px 0}
 
 <h2>11. Jenkins Integration</h2>
 <p><code>ci/Jenkinsfile</code> adds a <code>Generate Reports</code> stage and an optional <code>Notify Slack</code> stage bound to the <code>slack-webhook-url</code> Secret Text credential. The scanner result is preserved and only restored after reporting and notification, so archived evidence is never lost. Summary builds use <code>ci/Jenkinsfile.summaries</code>.</p>
-<figure><img src="screenshots/sprint3-jenkins-run.png" alt="Jenkins Sprint 3 pipeline with report and notify stages"><figcaption>Figure 11.1 — Jenkins Sprint 3 job: green scan with generated and archived reports.</figcaption></figure>
-<figure><img src="screenshots/sprint3-jenkins-blocked.png" alt="Jenkins blocked build with archived reports"><figcaption>Figure 11.2 — Policy-blocked build that still archived JSON/HTML/PDF evidence.</figcaption></figure>
+<div class="callout warn"><strong>Agent compatibility fix:</strong> the academic agent runs <code>dash</code>, so the first Sprint 3 build failed with exit 127 when <code>shopt</code> and bash arrays were used. The Jenkins stages were rewritten with POSIX globbing; subsequent builds passed on the first attempt.</div>
+<figure><img src="screenshots/sprint3-jenkins-run.png" alt="Jenkins Sprint 3 build passing with generated and archived reports"><figcaption>Figure 11.1 — Build #2 (<code>hello-world:latest</code>): policy passed and the JSON/HTML/PDF report plus manifest were archived.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-blocked.png" alt="Jenkins blocked build that still archived vulnerability reports"><figcaption>Figure 11.2 — Build #3 (<code>alpine:3.19</code>): the gate failed with 2 HIGH findings and the reports were still archived.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-blocked-console.png" alt="Jenkins console showing policy blocked and report generation for a blocked build"><figcaption>Figure 11.3 — Console evidence: <code>POLICY BLOCKED</code>, then report generation continues before the build result is enforced.</figcaption></figure>
+<h3>11.1 Scheduled summaries</h3>
+<p>Two Pipeline jobs share <code>ci/Jenkinsfile.summaries</code> with different cadence parameters and UTC cron triggers, and each run rescans every image in <code>config.yaml</code>.</p>
+<figure><img src="screenshots/sprint3-jenkins-daily.png" alt="Jenkins daily summary build with report and four scan artifacts"><figcaption>Figure 11.4 — Daily summary build #1: four fresh image scans plus the daily report and manifest.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-weekly.png" alt="Jenkins weekly summary build with report and four scan artifacts"><figcaption>Figure 11.5 — Weekly summary build #1 with the same portfolio-level evidence.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-schedule.png" alt="Jenkins summary job cron schedules in UTC"><figcaption>Figure 11.6 — Cadence configuration: <code>H 2 * * *</code> daily and <code>H 3 * * 1</code> weekly with the next run reported in Coordinated Universal Time.</figcaption></figure>
 
 <h2>12. Slack Delivery</h2>
 <figure><img src="screenshots/sprint3-slack-alert.png" alt="Slack alert for a high severity vulnerability report"><figcaption>Figure 12.1 — Immediate HIGH alert delivered to the security channel.</figcaption></figure>
@@ -182,9 +189,10 @@ ul{margin:10px 0 10px 0}
 <tr><td>JSON / HTML / PDF generation</td><td>One report ID, three formats, checksum manifest</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Notification policy</td><td>Threshold skip and fail-closed validation captured</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>GitHub Actions reports</td><td>Run #13 with report step and evidence bundle</td><td><span class="badge done">PASS</span></td></tr>
-<tr><td>Jenkins reports</td><td>Sprint 3 pipeline job green and blocked builds</td><td><span class="badge pending">IN PROGRESS</span></td></tr>
+<tr><td>Jenkins reports</td><td>Build #2 green and build #3 blocked, reports archived in both</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Daily / weekly summaries (Jenkins)</td><td>Daily and weekly build #1 with four fresh image scans each</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Slack real delivery</td><td>Requires an incoming webhook from the Slack workspace</td><td><span class="badge pending">PENDING</span></td></tr>
-<tr><td>Daily / weekly summaries</td><td>Manual dispatch on Jenkins and GitHub after scheduling is enabled</td><td><span class="badge pending">PENDING</span></td></tr>
+<tr><td>GitHub scheduled cadence</td><td>Manual dispatch after the workflow reaches the default branch</td><td><span class="badge pending">PENDING</span></td></tr>
 </tbody></table>
 
 <h2>14. Cost</h2>
