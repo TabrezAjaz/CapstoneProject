@@ -1,0 +1,1541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Viva Preparation — Container Image Vulnerability Scanner (Sprint 1–5)</title>
+<style>
+:root{
+  --navy:#061925; --teal:#14b8a6; --cyan:#5eead4; --ink:#16202e; --muted:#5b6b7a;
+  --paper:#f3f7f8; --line:#d7e3e6; --green:#16803a; --red:#b42318; --amber:#a15c00; --blue:#1d4ed8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:16px/1.62 "Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper)}
+
+/* ---------- header ---------- */
+header{background:radial-gradient(circle at 82% 12%,#117b75 0,transparent 30%),linear-gradient(150deg,#061925,#0b3840);color:#fff;padding:46px 24px 40px}
+header .wrap{max-width:1120px;margin:auto}
+.eyebrow{color:var(--cyan);font-weight:800;letter-spacing:.17em;text-transform:uppercase;font-size:13px}
+header h1{font-size:clamp(28px,4.4vw,46px);line-height:1.14;margin:14px 0 10px}
+header p.lead{color:#d3e7ea;max-width:860px;margin:0 0 20px;font-size:17px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip{border:1px solid #5eead480;background:#ffffff14;border-radius:24px;padding:6px 13px;font-size:13.5px}
+
+/* ---------- controls ---------- */
+.controls{position:sticky;top:0;z-index:20;background:#061925f2;padding:12px 24px;box-shadow:0 3px 14px #0003;backdrop-filter:blur(4px)}
+.controls .wrap{max-width:1120px;margin:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#search{flex:1;min-width:210px;padding:10px 13px;border-radius:9px;border:1px solid #2c4a54;background:#0d2530;color:#fff;font-size:15px}
+#search::placeholder{color:#7d99a4}
+.controls button{cursor:pointer;border:1px solid #2c4a54;background:#0d2530;color:#cfe6e9;padding:9px 13px;border-radius:9px;font-size:13.5px;font-weight:600}
+.controls button:hover{background:#143b47;color:#fff}
+.controls button.active{background:var(--teal);border-color:var(--teal);color:#04231f}
+#count{color:#8fb0ba;font-size:13px;white-space:nowrap}
+
+main{max-width:1120px;margin:auto;padding:26px 24px 90px}
+section{margin-top:44px}
+section>h2{font-size:25px;color:#0b5550;border-bottom:2px solid var(--teal);padding-bottom:8px;margin:0 0 8px}
+section>.secnote{color:var(--muted);font-size:14.5px;margin:0 0 14px}
+
+/* ---------- Q&A cards ---------- */
+.qa{background:#fff;border:1px solid var(--line);border-radius:12px;margin:11px 0;overflow:hidden;box-shadow:0 4px 14px #14303a10}
+.qa>summary{cursor:pointer;padding:14px 17px;font-weight:700;display:flex;gap:11px;align-items:flex-start;list-style:none}
+.qa>summary::-webkit-details-marker{display:none}
+.qa>summary::before{content:"Q";flex:0 0 26px;height:26px;display:grid;place-items:center;border-radius:7px;background:#dff6f3;color:#0b7d73;font-size:13px;font-weight:900}
+.qa[open]>summary{border-bottom:1px solid var(--line);background:#f8fcfc}
+.qa .body{padding:15px 18px 18px 54px}
+.qa .body p{margin:9px 0}
+.qa .body ul,.qa .body ol{margin:9px 0 9px 4px;padding-left:20px}
+.qa .body li{margin:5px 0}
+.tag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:10px;margin-left:auto;white-space:nowrap}
+.t-s1{background:#e0f2fe;color:#0c4a6e}
+.t-s2{background:#dcfce7;color:#14532d}
+.t-s3{background:#ede9fe;color:#4c1d95}
+.t-s4{background:#fef3c7;color:#78350f}
+.t-s5{background:#fee2e2;color:#7f1d1d}
+.t-arch{background:#e2e8f0;color:#334155}
+.t-sec{background:#ffe4e6;color:#881337}
+.t-test{background:#ccfbf1;color:#134e4a}
+.t-cost{background:#f0fdf4;color:#166534}
+
+/* ---------- tables & code ---------- */
+table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:#e5f6f4;color:#0b5550}
+code{font-family:Consolas,monospace;background:#eef6f5;padding:1.5px 5px;border-radius:4px;font-size:14px;color:#0b5550}
+pre{background:#0c1720;color:#e7f8f5;padding:14px 16px;border-left:5px solid var(--teal);border-radius:8px;overflow:auto;font-size:13.5px;font-family:Consolas,monospace;white-space:pre-wrap}
+.callout{border-left:5px solid var(--teal);background:#e9f9f7;padding:13px 16px;border-radius:0 8px 8px 0;margin:15px 0}
+.callout.warn{border-color:#d99b00;background:#fff8e2}
+.callout.danger{border-color:#c0392b;background:#fdeceb}
+.callout.ok{border-color:#16803a;background:#e9f8ef}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px}
+.fact{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+.fact b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fact span{font-size:16.5px;font-weight:700;color:#0b5550}
+footer{background:var(--navy);color:#a9c0c8;padding:26px 24px;text-align:center;font-size:14px}
+.empty{display:none;padding:18px;text-align:center;color:var(--muted)}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}.qa .body{padding-left:18px}#count{display:none}}
+@media print{
+  .controls{display:none}header{background:#0b3840 !important;-webkit-print-color-adjust:exact}
+  .qa{break-inside:avoid;box-shadow:none}.qa .body{display:block !important}
+  .qa[open]>summary{background:#fff}body{background:#fff}footer{background:#fff;color:#444}
+}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="eyebrow">Capstone Project · Viva Preparation</div>
+  <h1>Container Image Vulnerability Scanner with Reporting</h1>
+  <p class="lead">Sprint 1 se Sprint 5 tak — implementation, design decisions, security, testing aur exam-style tricky questions ke saath detailed answers. Har answer project ke real code aur evidence par based hai.</p>
+  <div class="chips">
+    <span class="chip">Trivy 0.74.0</span><span class="chip">Python wrapper 0.3.0</span>
+    <span class="chip">GitHub Actions</span><span class="chip">Jenkins</span>
+    <span class="chip">Slack</span><span class="chip">28 automated tests</span>
+    <span class="chip">Sprint 1–3 implemented</span>
+  </div>
+</div></header>
+
+<div class="controls"><div class="wrap">
+  <input id="search" type="search" placeholder="Search questions… (e.g. exit code, Trivy, Prometheus, allowlist)">
+  <button data-f="all" class="active">All</button>
+  <button data-f="s1">Sprint 1</button>
+  <button data-f="s2">Sprint 2</button>
+  <button data-f="s3">Sprint 3</button>
+  <button data-f="s4">Sprint 4</button>
+  <button data-f="s5">Sprint 5</button>
+  <button data-f="cross">Cross-cutting</button>
+  <button data-f="trap">Viva traps</button>
+  <button id="toggle">Expand all</button>
+  <span id="count"></span>
+</div></div>
+
+<main>
+
+<!-- ============ SNAPSHOT ============ -->
+<section id="snapshot">
+  <h2>0. Project snapshot — yaad rakho</h2>
+  <p class="secnote">Agar examiner pehla sawaal "project kya hai" pooche, to pehle ye facts bolo.</p>
+  <div class="facts">
+    <div class="fact"><b>Project</b><span>Container vulnerability scanner + CI gate + reports</span></div>
+    <div class="fact"><b>Repo / branch</b><span>TabrezAjaz/CapstoneProject · sprint-3</span></div>
+    <div class="fact"><b>Scanner engine</b><span>Trivy 0.74.0 + Python wrapper 0.3.0</span></div>
+    <div class="fact"><b>Policy default</b><span>fail_on: HIGH</span></div>
+    <div class="fact"><b>Exit codes</b><span>0 pass · 1 block · 2 config · 3 operational</span></div>
+    <div class="fact"><b>Artifact schema</b><span>1.0 (scan_id, UTC time, scanner, source)</span></div>
+    <div class="fact"><b>Report formats</b><span>JSON · HTML · PDF + SHA-256 manifest</span></div>
+    <div class="fact"><b>Automated tests</b><span>28 passing (offline, mocked)</span></div>
+    <div class="fact"><b>CI platforms</b><span>GitHub Actions + Jenkins</span></div>
+    <div class="fact"><b>Notifications</b><span>Slack (severity-aware, retry-safe)</span></div>
+    <div class="fact"><b>Images in config</b><span>nginx, python:3.12-slim, alpine:3.19, node:18</span></div>
+    <div class="fact"><b>Incremental cost</b><span>₹0</span></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Sprint</th><th>Deliverable</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Scanning foundation — repo, Trivy, first scans, CVE DB, Python wrapper</td><td><b style="color:var(--green)">Complete &amp; verified</b></td></tr>
+      <tr><td>2</td><td>CI/CD gate — thresholds, exit codes, GitHub Actions, Jenkins, tests</td><td><b style="color:var(--green)">Complete &amp; verified</b></td></tr>
+      <tr><td>3</td><td>Reporting &amp; notifications — JSON/HTML/PDF, Slack, daily/weekly summaries</td><td><b style="color:var(--amber)">Implemented; Slack delivery pending</b></td></tr>
+      <tr><td>4</td><td>Web dashboard — Prometheus metrics + Grafana trend tracking</td><td><b style="color:var(--blue)">Planned (design ready)</b></td></tr>
+      <tr><td>5</td><td>Advanced customisation — CVE allowlist, rescan, retry hardening</td><td><b style="color:var(--blue)">Planned (design ready)</b></td></tr>
+      <tr><td>6</td><td>Docs, cross-platform testing, deployment script, feedback</td><td><b>Not started</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout ok"><b>Sabse pehle ye bolna:</b> "Sprint 1 mein scanner foundation banaya, Sprint 2 mein usko CI gate bana diya, Sprint 3 mein evidence + notification layer add kar diya. Sprint 4 aur 5 ka design ready hai — dashboard aur exception handling."</div>
+</section>
+
+<!-- ============ A. ARCHITECTURE ============ -->
+<section id="arch">
+  <h2>A. Project overview &amp; architecture</h2>
+  <p class="secnote">Sabse zyada poocha jaane wala section. Har answer 20–40 second mein bol sako, itna rakho.</p>
+
+  <details class="qa"><summary>Apna project ek line mein kya hai?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p><b>Answer:</b> Ye ek automated container image vulnerability scanner hai jo Trivy se images scan karta hai, severity threshold ke aadhaar par CI/CD build ko pass ya block karta hai, aur structured JSON/HTML/PDF reports ke saath Slack alerts bhejta hai.</p>
+    <p><b>Problem statement:</b> Containerised apps mein known vulnerabilities production tak pahunch jaati hain kyunki scanning ya manual hai ya pipeline mein missing hai. Iska result — insecure image deploy ho jaati hai, aur pata bhi nahi chalta.</p>
+    <p><b>Solution:</b> Ek hi policy engine (Python) jo local, GitHub Actions aur Jenkins — teeno jagah same decision deta hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Poora architecture samjhao — image se report tak ka flow.<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <pre>Tomcat image / docker build
+        ↓
+config.yaml  (threshold, severities, output paths)
+        ↓
+Python wrapper  scanner/trivy_scanner.py
+        ↓
+Trivy engine  →  local vulnerability DB (CVE/NVD + GHSA + distro advisories)
+        ↓
+Schema 1.0 scan artifact (scan-results/*.json)
+        ↓
+reporters/  →  strict loader → canonical report model
+        ↓                    ↓         ↓
+      JSON                HTML       PDF
+        ↓___________________↓_________↓
+              SHA-256 manifest (reports/*.manifest.json)
+        ↓
+notifiers/slack.py  →  Slack channel (severity-aware alert + daily/weekly summary)</pre>
+    <p><b>Design principle:</b> Har layer ek hi kaam karta hai. Scanner policy decide karta hai, reporters sirf present karte hain, notifiers sirf deliver karte hain. Isse koi layer doosri layer ka kaam duplicate nahi karti — yaani koi "policy drift" nahi hoti.</p>
+  </div></details>
+
+  <details class="qa"><summary>Trivy choose kiya, Clair kyun nahi?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th>Criteria</th><th>Trivy (chosen)</th><th>Clair</th></tr></thead>
+      <tbody>
+        <tr><td>Setup</td><td>Single binary / ek container, koi server nahi</td><td>Postgres DB + API service chahiye</td></tr>
+        <tr><td>Scan targets</td><td>Images, filesystem, repo, IaC, secrets</td><td>Sirf container images</td></tr>
+        <tr><td>Speed</td><td>Seconds (local cached DB)</td><td>Slower, indexing workflow</td></tr>
+        <tr><td>CI readiness</td><td>Native exit codes + SARIF/JSON output</td><td>Client (clairctl) extra chahiye</td></tr>
+        <tr><td>Output formats</td><td>table, json, sarif, cyclonedx, template</td><td>JSON via API</td></tr>
+      </tbody>
+    </table>
+    <p><b>Ek line answer:</b> "Trivy single binary hai, koi separate database server maintain nahi karna padta, aur CI mein directly fail/pass decide kar sakta hai — isliye zero extra infrastructure cost aata hai."</p>
+  </div></details>
+
+  <details class="qa"><summary>Agar Trivy already CI mein chal sakta hai, to Python wrapper kyun banaya?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p><b>Ye important question hai.</b> Wrapper ke 5 clear faayde hain:</p>
+    <ol>
+      <li><b>Ek hi policy engine:</b> Threshold, severities, ignore-unfixed — sab config se aata hai. Agar Jenkinsfile aur GitHub YAML do jagah logic hoti, to dono drift kar jaate.</li>
+      <li><b>Stable exit contract:</b> Trivy ka exit code scanner failure aur policy decision mein farq nahi batata. Wrapper 0/1/2/3 deta hai — jisse "image vulnerable hai" aur "scanner toot gaya" alag dikhte hain.</li>
+      <li><b>Normalised output:</b> Trivy ka JSON bahut bada aur version-dependent hai. Wrapper usko ek chhote, versioned schema (1.0) mein convert karta hai jise report generator reliably consume kar sakta hai.</li>
+      <li><b>Artifact + metadata:</b> scan_id, UTC timestamp, CI source — ye sab wrapper add karta hai, jisse traceability milti hai.</li>
+      <li><b>Config validation:</b> Galat threshold ya timeout par fail-closed (exit 2) hota hai, silent fallback nahi.</li>
+    </ol>
+  </div></details>
+
+  <details class="qa"><summary>config.yaml kyun? Hardcode kyun nahi kiya?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p>Hardcode karne se har change ke liye code edit + commit + review chahiye hota, aur environment-specific values code mein aa jaate.</p>
+    <p>Config file se:</p>
+    <ul>
+      <li>Policy change bina code change (jaise <code>fail_on: HIGH</code> → <code>CRITICAL</code>)</li>
+      <li>Same code local, CI aur Jenkins — sab jagah chalta hai</li>
+      <li>Review mein policy change clearly visible hota hai (code review, not buried in YAML logic)</li>
+      <li>Secrets config mein nahi rakhe — sirf policy. Webhook sirf environment/credential se aata hai.</li>
+    </ul>
+    <pre>scanner:
+  severities: [LOW, MEDIUM, HIGH, CRITICAL]
+  fail_on: HIGH
+  ignore_unfixed: false
+  pkg_types: [os]
+  timeout: "15m"
+output:
+  dir: "./scan-results"
+  report_dir: "./reports"
+  formats: [json, html, pdf]
+notifications:
+  provider: slack
+  alert_on: HIGH</pre>
+  </div></details>
+
+  <details class="qa"><summary>Folder structure aisi kyun hai? Ye decide kaise kiya?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p>Structure six-sprint roadmap ko dekhkar design kiya, taaki baad ke sprints mein restructuring na karni pade:</p>
+    <pre>scanner/     → Trivy wrapper, normalisation, policy      (Sprint 1–2)
+reporters/   → JSON / HTML / PDF + manifest                (Sprint 3)
+notifiers/   → Slack / Teams / email adapters              (Sprint 3)
+ci/          → Jenkinsfile + summary pipeline              (Sprint 2–3)
+dashboard/   → Prometheus + Grafana config                 (Sprint 4)
+exceptions/  → allowlist.yaml                              (Sprint 5)
+docker/      → scanner ka apna Dockerfile
+tests/       → fixtures + unit tests
+docs/        → sprint reports + evidence
+config.yaml  → single source of policy truth</pre>
+    <p><b>Ek line:</b> "Separation of concerns — scanning, presenting, delivering aur governance alag folders mein, isliye naya feature add karte waqt existing code touch nahi karna padta."</p>
+  </div></details>
+
+  <details class="qa"><summary>Ye project production-ready hai? Limitations kya hain?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <p><b>Honest answer better hai.</b> Ye production-usable hai lekin kuch deliberate scope limits hain:</p>
+    <ul>
+      <li>Currently <code>pkg_types: [os]</code> — sirf OS packages scan hote hain, language dependencies (npm, pip) nahi. Ye Sprint 1 mein choose kiya gaya tha taaki base images fairly compare ho sakein. Production mein <code>pkg_types</code> hata kar poora scan karenge.</li>
+      <li>Dashboard aur allowlist abhi implemented nahi — Sprint 4 aur 5 mein hai.</li>
+      <li>Metrics history Prometheus par depend karegi (Sprint 4); abhi koi trend database nahi.</li>
+      <li>Private registry ke liye credentials configuration chahiye — design mein docs hain, live setup nahi.</li>
+      <li>Slack ke liye real webhook abhi configure nahi hua (workspace access pending).</li>
+    </ul>
+    <p><b>Bonus point bolo:</b> "Main deliberate scope boundary maintain kar raha hoon — har sprint ka apna deliverable hai, isliye Sprint 3 ke reports mein dashboard code nahi ghusa."</p>
+  </div></details>
+
+  <details class="qa"><summary>Naya scanner ya notifier provider add karna ho to code kaise change hoga?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p>Architecture extensible hai:</p>
+    <ul>
+      <li><b>Naya CI platform</b> (GitLab CI): sirf <code>python -m scanner.trivy_scanner "$IMAGE"</code> call karo aur exit code use karo — koi policy logic likhne ki zarurat nahi.</li>
+      <li><b>Naya notifier</b> (Teams/email): <code>notifiers/</code> mein naya module jo same payload contract implement kare — reporters aur CI ko touch nahi karna.</li>
+      <li><b>Naya report format</b> (SARIF/CSV): <code>reporters/service.py</code> mein ek renderer add karo; JSON/HTML/PDF ko chhune ki zarurat nahi, kyunki sab ek hi canonical report model se bante hain.</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Cost optimisation kaise achieve kiya? (ye 10% grading mein hai)<span class="tag t-cost">Cost</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Trivy</b> — open source, free; koi server/database nahi</li>
+      <li><b>Vulnerability DB</b> — local cache; daily download ~110 MB, uske baad offline scans</li>
+      <li><b>GitHub Actions</b> — public repo par hosted runners free minutes par chalte hain</li>
+      <li><b>Jenkins</b> — academic controller already exist karta hai, extra compute kharch nahi</li>
+      <li><b>PDF generation</b> — ReportLab local, koi paid PDF API nahi</li>
+      <li><b>Slack</b> — incoming webhooks current plan mein free</li>
+      <li><b>Dashboard (Sprint 4)</b> — Prometheus + Grafana Docker Compose par locally, koi managed observability service nahi</li>
+      <li><b>Efficiency controls</b> — Trivy DB cache, concurrency cancellation, 30-day artifact retention, scheduled jobs off-peak UTC</li>
+    </ul>
+    <p><b>Incremental software cost: ₹0.</b></p>
+  </div></details>
+</section>
+
+<!-- ============ B. SPRINT 1 ============ -->
+<section id="s1">
+  <h2>B. Sprint 1 — Scanning foundation</h2>
+  <p class="secnote">Goal: "basic image scanning process aur verified scanner output."</p>
+
+  <details class="qa"><summary>Sprint 1 ka exact goal kya tha, aur kya deliver hua?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p><b>Assignment goal:</b> repository + folder structure setup, Trivy install aur configure, sample images pull karke initial scans, aur CVE database integration explore karna.</p>
+    <p><b>Deliverables jo complete hue:</b></p>
+    <ul>
+      <li>Git repository + six-sprint-ready folder structure</li>
+      <li>Trivy 0.74.0 install + vulnerability DB refresh verified</li>
+      <li>4 images ke real scans: <code>nginx:latest</code>, <code>python:3.12-slim</code>, <code>alpine:3.19</code>, <code>node:18</code></li>
+      <li>Python wrapper <code>scanner/trivy_scanner.py</code></li>
+      <li>Machine-readable JSON scan output</li>
+      <li>Architecture diagram + 8 evidence screenshots + Sprint 1 report</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Trivy install kaise kiya aur verify kaise karte ho?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Do supported raste document kiye:</p>
+    <pre># Option A — native (Windows: winget/choco, Linux/WSL: apt repo)
+trivy --version        →  Version: 0.74.0
+
+# Option B — no-install container run (CI-friendly)
+docker run --rm -v trivy-cache:/root/.cache aquasec/trivy:0.74.0 image nginx:latest</pre>
+    <p><b>Verification:</b> <code>trivy --version</code> version + DB metadata dikhata hai, aur <code>trivy image --download-db-only</code> se confirm hota hai ki vulnerability DB successfully download ho gaya ("Artifact successfully downloaded").</p>
+  </div></details>
+
+  <details class="qa"><summary>Trivy ka vulnerability database kahan se aata hai? Kaunse sources?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Trivy multiple advisory feeds aggregate karke unko canonical <b>CVE / NVD</b> IDs par map karta hai:</p>
+    <table>
+      <thead><tr><th>Source</th><th>Kya provide karta hai</th></tr></thead>
+      <tbody>
+        <tr><td>NVD (National Vulnerability Database)</td><td>Canonical CVE records + CVSS scores</td></tr>
+        <tr><td>GitHub Advisory Database (GHSA)</td><td>Language-package advisories (npm, PyPI, Go…)</td></tr>
+        <tr><td>Distro security trackers</td><td>Debian, Ubuntu, Alpine (secdb), RHEL, Amazon Linux</td></tr>
+        <tr><td>Vendor / ecosystem feeds</td><td>OSV, language ecosystem databases</td></tr>
+      </tbody>
+    </table>
+    <p><b>Cache:</b> first scan par DB download hota hai (~110 MB), uske baad <code>~/.cache/trivy</code> se offline use hota hai. Default refresh cycle ~24 hours.</p>
+  </div></details>
+
+  <details class="qa"><summary>Trivy ke output columns ka matlab samjhao.<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Library / Package</td><td>Vulnerable OS package ya language dependency</td></tr>
+        <tr><td>Vulnerability</td><td>CVE / advisory ID (NVD par link ho sakta hai)</td></tr>
+        <tr><td>Severity</td><td>CRITICAL / HIGH / MEDIUM / LOW / UNKNOWN</td></tr>
+        <tr><td>Status</td><td><code>fixed</code> = fix available, <code>affected</code> = fix nahi hai abhi</td></tr>
+        <tr><td>Installed Version</td><td>Image mein currently maujood version</td></tr>
+        <tr><td>Fixed Version</td><td>Wo version jisme vulnerability resolve hoti hai (blank = koi fix nahi)</td></tr>
+      </tbody>
+    </table>
+    <p>Summary line example: <code>Total: 262 (UNKNOWN: 10, LOW: 128, MEDIUM: 92, HIGH: 28, CRITICAL: 4)</code></p>
+  </div></details>
+
+  <details class="qa"><summary>CVSS score aur severity label ka relation kya hai?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Har CVE ke saath CVSS base score (0.0–10.0) hota hai. Trivy usko severity label mein map karta hai:</p>
+    <table>
+      <thead><tr><th>Severity</th><th>CVSS range</th><th>Humari policy</th></tr></thead>
+      <tbody>
+        <tr><td>CRITICAL</td><td>9.0 – 10.0</td><td>Build block</td></tr>
+        <tr><td>HIGH</td><td>7.0 – 8.9</td><td>Build block (<code>fail_on: HIGH</code>)</td></tr>
+        <tr><td>MEDIUM</td><td>4.0 – 6.9</td><td>Report only</td></tr>
+        <tr><td>LOW</td><td>0.1 – 3.9</td><td>Report only</td></tr>
+      </tbody>
+    </table>
+    <p><b>Important nuance:</b> severity standard-based hai, humne apni marzi se nahi banayi — isliye reports industry tools ke saath comparable hoti hain.</p>
+  </div></details>
+
+  <details class="qa"><summary>Chaaron images ke result kya aaye? Koi insight?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>OS-package scope mein consistent comparison (Trivy 0.74.0):</p>
+    <table>
+      <thead><tr><th>Image</th><th>Base</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr></thead>
+      <tbody>
+        <tr><td><code>alpine:3.19</code></td><td>Alpine 3.19.9</td><td>0</td><td>2</td><td>5</td><td>3</td></tr>
+        <tr><td><code>python:3.12-slim</code></td><td>Debian</td><td>3</td><td>16</td><td>60</td><td>75</td></tr>
+        <tr><td><code>nginx:latest</code></td><td>Debian</td><td>4</td><td>28</td><td>92</td><td>128</td></tr>
+        <tr><td><code>node:18</code></td><td>Debian 12</td><td>225</td><td>1721</td><td>4798</td><td>1706</td></tr>
+      </tbody>
+    </table>
+    <p><b>Key insight jo examiner ko impress karta hai:</b> minimal base images (<code>alpine</code>) mein dramatically kam vulnerabilities hoti hain; full runtime images (<code>node:18</code>) mein hazaaron. Yaani <b>sabse effective security improvement base image ka chunaav hai</b>, na ki sirf patching. Ye baat aage recommendation engine ka base banti hai.</p>
+    <p><b>Note:</b> ye numbers time-dependent hain — image tags aur vulnerability DB update hone par badalte rehte hain, isliye evidence mein scan date likhi hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 1 mein aapne sirf OS packages scan kiye — exactly kaise aur kyun?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Command: <code>trivy image --scanners vuln --pkg-types os --timeout 15m &lt;image&gt;</code></p>
+    <p><b>Kyun:</b> Sprint 1 ka objective base images ko <i>fairly compare</i> karna tha. Agar ek image mein npm dependencies bhi scan hote aur doosre mein nahi, to counts apples-to-apples nahi rehte. Isliye OS layer fix kiya.</p>
+    <p><b>Config mein:</b> <code>scanner.pkg_types: [os]</code> — yaani behaviour code mein nahi, config mein hai aur easily badla ja sakta hai.</p>
+    <p><b>Limitation bolo:</b> isse language-level CVEs miss hote hain. Production mein <code>pkg_types</code> ko <code>os,library</code> karenge.</p>
+  </div></details>
+
+  <details class="qa"><summary>Aapka JSON artifact kyun important hai? Usme kya kya hai?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Kyunki JSON hi wo "contract" hai jise baaki saara system consume karta hai — reporters, CI evidence aur aage dashboard.</p>
+    <p>Schema 1.0 fields (Sprint 3 mein versioned kiya):</p>
+    <ul>
+      <li><code>schema_version: "1.0"</code>, <code>scan_id</code> (UUID), <code>scanned_at</code> (UTC)</li>
+      <li><code>image</code>, <code>summary</code> (5 severity counts), <code>findings[]</code> (id, pkg, severity, installed, fixed)</li>
+      <li><code>policy</code> → <code>fail_on</code>, <code>blocking_findings</code>, <code>passed</code></li>
+      <li><code>scan_options</code> → severities, ignore_unfixed, pkg_types, timeout</li>
+      <li><code>scanner</code> → trivy + wrapper version; <code>source</code> → CI provider, commit, run id</li>
+    </ul>
+    <p><b>Benefit:</b> human-readable table ko machine-readable banaya — isliye report generation, gating aur future metrics sab isi ek file se ho sakte hain.</p>
+  </div></details>
+
+  <details class="qa"><summary>Python wrapper Sprint 1 mein kya karta tha?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Ye Trivy ke around ek thin, testable layer thi. Functions:</p>
+    <ul>
+      <li><code>load_config()</code> — config.yaml load + safe defaults</li>
+      <li><code>scan_image()</code> — Trivy JSON mode mein chalata tha aur parse karta tha</li>
+      <li><code>write_artifact()</code> — normalized artifact likhta tha</li>
+      <li><code>run()</code> / <code>main()</code> — CLI entry point</li>
+    </ul>
+    <p><b>Design choice:</b> wrapper deliberately "ek kaam achhe se" karta hai. Sprint 2 mein usme policy add hui, Sprint 3 mein reporting — core scan logic badla nahi.</p>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 1 mein kaunsi problem aayi aur kaise solve ki?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p>Do real issues aaye — ye batana achha lagta hai kyunki debugging dikhata hai:</p>
+    <ol>
+      <li><b>Java DB download failure (disk space):</b> <code>node:18</code>/<code>nginx</code> scan ke waqt Trivy Java DB (~913 MB) download karne laga aur disk full ho gaya.
+        <br><b>Fix:</b> scan scope OS packages tak limited kiya (JAR scanning off), aur <code>--timeout</code> badha ke 15m kiya. Yaani problem diagnose karke requirement ke hisaab se scope tune kiya.</li>
+      <li><b>Scanner timeout on large images:</b> <code>node:18</code> mein 413 packages the aur default timeout kam pad gaya.
+        <br><b>Fix:</b> <code>SCANNER_TIMEOUT</code> config se controllable banaya (default 15m).</li>
+    </ol>
+    <p><b>Bonus:</b> ek bug bhi mila — wrapper purane version mein non-zero exit code par bhi empty result return kar sakta tha (silent false-negative). Usko fix karke fail-fast bana diya: ab Trivy fail ho to exit 3, aur wrapper ko zero-vulnerability nahi samjhega.</p>
+  </div></details>
+
+  <details class="qa"><summary><code>--ignore-unfixed</code> kya karta hai? Aapne use kiya ya nahi?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <p><code>--ignore-unfixed</code> un vulnerabilities ko hide karta hai jinka koi fix version available nahi hai. Yaani sirf wahi dikhata hai jinko upgrade karke actually fix kar sakte ho.</p>
+    <p><b>Humara default:</b> <code>ignore_unfixed: false</code> — kyunki hum poora risk dekha rahe hain, aur "unfixed" vulnerabilities bhi security risk hain (bas unka mitigation alag hota hai, jaise compensating control ya image replace).</p>
+    <p><b>Override:</b> CLI par <code>--ignore-unfixed</code> ya env var <code>SCANNER_IGNORE_UNFIXED=true</code> se change ho jaata hai — per-run flexibility milti hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Scan results reproducibility kaise ensure karte ho?<span class="tag t-s1">Sprint 1</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Trivy version pinned:</b> 0.74.0 (na ki <code>latest</code>) — CI aur local same engine</li>
+      <li><b>Scan options artifact mein record:</b> severities, pkg_types, ignore_unfixed, timeout — "kaise scan hua" documented</li>
+      <li><b>UTC timestamps:</b> <code>scanned_at</code> se pata chalta hai kis DB snapshot par scan hua</li>
+      <li><b>Checksums:</b> report manifest mein SHA-256, isliye report tamper ya corruption detect ho sakti hai</li>
+      <li><b>Note:</b> exact finding counts time ke saath badalte hain (naye CVEs add hote hain), isliye tests mein synthetic fixtures use kiye — real CB data par assert nahi karte.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ C. SPRINT 2 ============ -->
+<section id="s2">
+  <h2>C. Sprint 2 — CI/CD security gate</h2>
+  <p class="secnote">Yahi sabse technical sprint hai. Exit codes aur precedence par examiner zaroor poochega.</p>
+
+  <details class="qa"><summary>Sprint 2 ka goal kya tha?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p><b>Assignment:</b> scanning ko CI/CD pipelines (Jenkins, GitHub Actions) mein automate karna, severity ke aadhaar par pass/fail criteria define karna, environment configuration add karna, aur sample images ke saath integration test karna.</p>
+    <p><b>Goal:</b> image vulnerabilities hone par build automatically fail ho jaaye — yaani scanner ek <i>enforcement point</i> ban jaaye, sirf reporting tool nahi.</p>
+  </div></details>
+
+  <details class="qa"><summary>Build exactly kab fail hota hai?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Policy: <code>fail_on: HIGH</code>. Yaani:</p>
+    <ul>
+      <li>Koi bhi HIGH ya CRITICAL finding → <b>build block</b> (exit 1)</li>
+      <li>Sirf MEDIUM/LOW → build pass (exit 0), par report mein dikhta hai</li>
+      <li>Scanner/config problem → build fail (exit 2 ya 3), fail-closed</li>
+    </ul>
+    <p><code>blocking_count()</code> function threshold ke <i>barabar ya upar</i> wale findings count karta hai — severity ranking: UNKNOWN &lt; LOW &lt; MEDIUM &lt; HIGH &lt; CRITICAL.</p>
+    <p>Practical example: <code>alpine:3.19</code> par 2 HIGH findings mile → <code>blocking_findings=2</code> → exit 1 → build red.</p>
+  </div></details>
+
+  <details class="qa"><summary>Exit codes 0/1/2/3 kyun? Sirf 0/1 se kaam nahi chalta tha?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p><b>Ye "killer" answer hai — zaroor yaad rakho:</b></p>
+    <table>
+      <thead><tr><th>Exit</th><th>Meaning</th><th>CI result</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Scan complete, policy pass</td><td>Green</td></tr>
+        <tr><td>1</td><td>Scan complete, policy violate (genuine security block)</td><td>Intentional red</td></tr>
+        <tr><td>2</td><td>Invalid CLI/config (galat threshold, invalid severity)</td><td>Fail closed</td></tr>
+        <tr><td>3</td><td>Operational failure (Trivy missing, registry/timeout/JSON/file error)</td><td>Fail closed</td></tr>
+      </tbody>
+    </table>
+    <p><b>Why it matters:</b> agar sirf 0/1 hota, to ek broken scanner bhi build fail kar deta — aur team sochegi "image mein vulnerability hai". Isse <b>false sense of security</b> milti hai. Exit 3 alag hone se team turant samajh jaati hai ki problem scanner/infra mein hai, image mein nahi.</p>
+    <p>Ye distinction tests mein bhi cover kiya: exit 1 aur exit 3 ke alag test cases hain.</p>
+  </div></details>
+
+  <details class="qa"><summary>Trivy ka <code>--exit-code</code> kyun use nahi kiya?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Trivy ka <code>--exit-code</code> directly build fail kara sakta hai, lekin:</p>
+    <ul>
+      <li>Uski failure "Trivy crash" aur "vulnerability found" mein farq nahi karti (same non-zero)</li>
+      <li>Policy phir CI YAML mein chali jaati — GitHub YAML aur Jenkinsfile mein duplicate logic, drift ka risk</li>
+      <li>Uske saath report generation/notification ka ordering manage karna mushkil hota (build turant fail, evidence generate nahi hota)</li>
+    </ul>
+    <p>Isliye <b>policy evaluation Python mein rakhi</b> aur scanner hamesha <code>--exit-code</code> ke bina chalaya. Build ka final result hum khud decide karte hain — aur wahi exit code restore karte hain evidence collect karne ke <i>baad</i>.</p>
+  </div></details>
+
+  <details class="qa"><summary>Configuration precedence explain karo aur kyun aisa design kiya?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <pre>CLI option  &gt;  Environment variable  &gt;  config.yaml  &gt;  code default</pre>
+    <p><b>Properties:</b> har setting independently resolve hoti hai; chhota override bada default override karta hai.</p>
+    <p><b>Kyun:</b></p>
+    <ul>
+      <li><b>Config file</b> = team policy (reviewed, versioned)</li>
+      <li><b>Env var</b> = CI/CD-specific override (jaise ek special pipeline sirf CRITICAL par block kare)</li>
+      <li><b>CLI</b> = ad-hoc local testing without editing files</li>
+      <li><b>Defaults</b> = fail-safe, agar kuch bhi na mile to bhi system chale</li>
+    </ul>
+    <p>Invalid value par <b>fail-closed</b> — exit 2, silent fallback nahi. Kyunki security control mein silent default dangerous hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Kaunse environment variables support karte ho?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th>Variable</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>SCAN_IMAGE</code></td><td>CI se aane wali target image</td></tr>
+        <tr><td><code>SCANNER_CONFIG</code></td><td>Alternate YAML path</td></tr>
+        <tr><td><code>SCANNER_SEVERITIES</code></td><td>Kaunse severities scan karne hain</td></tr>
+        <tr><td><code>SCANNER_FAIL_ON</code></td><td>Minimum blocking severity</td></tr>
+        <tr><td><code>SCANNER_IGNORE_UNFIXED</code></td><td>Unfixed findings include/skip</td></tr>
+        <tr><td><code>SCANNER_PKG_TYPES</code></td><td>Package scope (default <code>os</code>)</td></tr>
+        <tr><td><code>SCANNER_TIMEOUT</code></td><td>Trivy timeout (default 15m)</td></tr>
+        <tr><td><code>SCANNER_OUTPUT_DIR</code></td><td>Scan artifact directory</td></tr>
+        <tr><td><code>REPORT_OUTPUT_DIR</code></td><td>Report output directory</td></tr>
+        <tr><td><code>REPORT_FORMATS</code></td><td>json,html,pdf</td></tr>
+        <tr><td><code>NOTIFICATION_ALERT_ON</code></td><td>Slack alert threshold (default HIGH)</td></tr>
+        <tr><td><code>SLACK_WEBHOOK_URL</code></td><td>Secret — sirf env/credential se</td></tr>
+      </tbody>
+    </table>
+    <p>Saare variables <code>.env.example</code> mein documented hain (real secret ke bina).</p>
+  </div></details>
+
+  <details class="qa"><summary>GitHub Actions workflow ke triggers aur steps samjhao.<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p><b>Triggers:</b> <code>push</code> (main + sprint branches), <code>pull_request</code> (main), <code>workflow_dispatch</code> (manual, image + threshold input), aur <code>workflow_call</code> (reusable — dusra workflow naya build kiya image hand over kar sakta hai).</p>
+    <p><b>Job steps (ek hi job "Vulnerability gate"):</b></p>
+    <ol>
+      <li>Checkout</li>
+      <li>Python setup (cache enabled)</li>
+      <li>Dependencies install</li>
+      <li>Trivy pinned version install (cache)</li>
+      <li>Vulnerability DB refresh</li>
+      <li>Deterministic tests + JUnit XML</li>
+      <li>Scanner gate — exit code capture (job ko turant fail nahi karta)</li>
+      <li>Reports generate (JSON/HTML/PDF)</li>
+      <li>Slack alert (conditional)</li>
+      <li>Artifacts upload — <code>if: always()</code></li>
+      <li><b>Gate result restore</b> — ab jaa kar exit code apply hota hai</li>
+    </ol>
+    <p><b>Design point:</b> exit code ko "restore" isliye karte hain taaki fail hone par bhi evidence generate aur upload ho jaaye.</p>
+  </div></details>
+
+  <details class="qa"><summary>GitHub Actions mein security considerations kya rakhe?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <ul>
+      <li><code>permissions: contents: read</code> — least privilege; workflow ko write access nahi chahiye</li>
+      <li><code>pull_request_target</code> use nahi kiya — kyunki wo untrusted fork code ko secrets de sakta hai</li>
+      <li>Fork PR par Slack secret expose nahi hota (<code>github.event_name != 'pull_request'</code> condition)</li>
+      <li>Trivy aur third-party actions pinned versions par (supply-chain risk kam)</li>
+      <li>Normal registry scan ke liye Docker socket mount nahi kiya — warna host Docker control expose hota</li>
+      <li><code>concurrency</code> with cancel-in-progress — duplicate runs cancel, cost control</li>
+      <li>Artifact retention 30 days — scan output package inventory dikhata hai, isliye limited retention</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Jenkins pipeline ke stages batao.<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Job: <code>TabrezAjaz-CapstoneProject-Sprint3</code> (Sprint 2 ka job bhi tha), Script Path <code>ci/Jenkinsfile</code>, branch <code>*/sprint-3</code>.</p>
+    <ol>
+      <li><b>Checkout</b> — SCM se code</li>
+      <li><b>Environment</b> — Python deps + pinned Trivy 0.74.0 download/verify</li>
+      <li><b>Refresh vulnerability DB</b> — retry(2) ke saath</li>
+      <li><b>Tests</b> — pytest + JUnit</li>
+      <li><b>Vulnerability Gate</b> — scan, exit code capture (returnStatus se)</li>
+      <li><b>Generate Reports</b> — JSON/HTML/PDF (jab artifacts milein)</li>
+      <li><b>Notify Slack</b> — sirf tab jab <code>NOTIFY=true</code> aur credential bound ho</li>
+      <li><b>Enforce Gate Result</b> — ab scanner exit code apply hota hai</li>
+    </ol>
+    <p><b>Post (always):</b> JUnit publish + scan-results aur reports archive — pass aur fail dono mein.</p>
+  </div></details>
+
+  <details class="qa"><summary>Jenkins agent par kya problems aayi aur kaise solve ki?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Academic Jenkins agent bahut minimal tha — teen issues mile:</p>
+    <ol>
+      <li><b><code>python3-venv</code> installed nahi</b> (aur sudo access nahi) → <code>python3 -m venv</code> fail ho gaya.
+        <br><b>Fix:</b> <code>pip install --target .ci-python</code> se workspace-local dependency directory banayi, aur <code>PYTHONPATH</code> se use kiya — root ki zarurat nahi.</li>
+      <li><b>Trivy preinstalled nahi</b> → pipeline khud pinned tarball download karke <code>.tools/</code> mein extract karta hai.</li>
+      <li><b>Shell <code>dash</code> tha, bash nahi</b> → mere pehle Sprint 3 script mein <code>shopt</code> aur arrays the, to <code>exit 127</code> aaya.
+        <br><b>Fix:</b> POSIX-compatible globbing (<code>ls ... || true</code> + string check) use kiya. Uske baad builds pehli baar mein pass hue.</li>
+    </ol>
+    <p><b>Lesson:</b> CI pipeline ko environment ke assumptions nahi karne chahiye — self-bootstrapping hona chahiye.</p>
+  </div></details>
+
+  <details class="qa"><summary>GitHub Actions aur Jenkins mein same policy kaise guarantee kari?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Kyunki <b>policy logic kisi CI platform mein nahi hai</b>. Dono platforms sirf ek hi command call karte hain:</p>
+    <pre>python -m scanner.trivy_scanner "$SCAN_IMAGE"</pre>
+    <p>Workflow YAML aur Jenkinsfile mein sirf orchestration hai — install, cache, run, archive. Severity counting, threshold aur exit code sab Python mein. Isliye same input par identical decision aata hai</p>
+    <p><b>Iska test bhi hai:</b> dono platforms par humne green path (<code>hello-world:latest</code>) aur intentionally blocked path (<code>alpine:3.19</code>, 2 HIGH) demonstrate kiya.</p>
+  </div></details>
+
+  <details class="qa"><summary>Tests bina Docker/network ke kaise likhe?<span class="tag t-test">Testing</span></summary>
+  <div class="body">
+    <p>Do techniques use ki:</p>
+    <ol>
+      <li><b>Mocked subprocess:</b> <code>subprocess.run</code> ko monkeypatch kiya, taaki actual Trivy na chale. Hum assert karte hain ki correct command bani (jaise <code>--severity HIGH,CRITICAL</code>, <code>--ignore-unfixed</code> present hai, image last argument hai).</li>
+      <li><b>Synthetic fixtures:</b> <code>tests/fixtures/</code> mein hand-written Trivy JSON — <code>trivy-pass.json</code> (sirf LOW), <code>trivy-fail.json</code> (HIGH + CRITICAL), <code>trivy-empty.json</code> (null vulnerabilities). Real CVE data kabhi bhi badal sakta hai, isliye assertions fixtures par hain.</li>
+    </ol>
+    <p><b>Isse kya mila:</b> tests deterministic, fast (~3 seconds) aur CI mein her run par reliable — network flakiness nahi.</p>
+    <p><b>Coverage:</b> command construction, parsing, invalid JSON, missing executable, precedence, strict booleans, policy boundaries, exit codes 0–3, artifact creation, multi-image failure priority.</p>
+  </div></details>
+
+  <details class="qa"><summary><code>--all-configured</code> kya karta hai?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Bina argument ke, ye <code>config.yaml</code> ke <code>images</code> list ke saare images scan karta hai. Ye daily/weekly portfolio summary ke liye use hota hai.</p>
+    <p><b>Aggregation rules:</b></p>
+    <ul>
+      <li>Kisi bhi image par operational error → exit 3 (highest priority)</li>
+      <li>Warna koi bhi image blocked → exit 1</li>
+      <li>Warna sab pass → exit 0</li>
+    </ul>
+    <p>Yaani ek image ka failure baaki images ka result chhupata nahi — sab scan hote hain aur summary ban jaati hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Dono platforms mein evidence fail hone par bhi kaise bacha?<span class="tag t-s2">Sprint 2</span></summary>
+  <div class="body">
+    <p>Ye "evidence-before-failure" pattern hai:</p>
+    <ul>
+      <li><b>GitHub:</b> scanner step exit code ko <code>GITHUB_OUTPUT</code> mein capture karta hai aur step success kar deta hai; reports upload <code>if: always()</code> ke saath hoti hain; aakhir mein ek step original exit code restore karta hai → build red lekin evidence maujood.</li>
+      <li><b>Jenkins:</b> <code>sh(returnStatus: true)</code> se exit code variable mein rakha jaata hai; reports aur Slack uske baad chalte hain; <code>Enforce Gate Result</code> stage aakhir mein <code>error()</code> deta hai; <code>post { always { archiveArtifacts } }</code> evidence save karta hai.</li>
+    </ul>
+    <p><b>Verified:</b> Jenkins build #3 mein build FAILURE tha, phir bhi JSON+HTML+PDF+manifest archived mile.</p>
+  </div></details>
+</section>
+
+<!-- ============ D. SPRINT 3 ============ -->
+<section id="s3">
+  <h2>D. Sprint 3 — Reporting &amp; notification system</h2>
+  <p class="secnote">Is sprint ka scope: reports (JSON/HTML/PDF), Slack alerts, severity customisation, daily/weekly summaries.</p>
+
+  <details class="qa"><summary>Sprint 3 ka goal kya tha?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p><b>Assignment:</b> structured report generation module (PDF/HTML/JSON), Slack ya Teams integration, severity ke hisaab se customized alerts, aur daily/weekly summary alerts implement karna.</p>
+    <p><b>Goal:</b> scan ko sirf pass/fail na rakhein — uske results ko <i>communicable evidence</i> bana dein, taaki DevOps team turant action le sake.</p>
+  </div></details>
+
+  <details class="qa"><summary>Report generation ka flow samjhao.<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <pre>scanner  →  schema 1.0 artifact (scan-results/*.json)
+                        ↓
+        reporters/service.py :: load_artifacts()  → strict validation
+                        ↓
+                     build_document()  → canonical ReportDocument
+                        ↓
+        ┌──────────────┼──────────────┐
+     JSON           HTML            PDF          (ek hi report_id, ek hi totals)
+        └──────────────┼──────────────┘
+                        ↓
+              manifest (SHA-256, size, media type)</pre>
+    <p><b>Command:</b></p>
+    <pre>python -m reporters.cli scan-results/*-????????.json --period daily \
+  --formats json,html,pdf --output-dir reports \
+  --title "Daily Container Vulnerability Summary"</pre>
+    <p><b>Exit codes:</b> 0 = success, 2 = invalid input/config, 3 = rendering/I-O failure.</p>
+  </div></details>
+
+  <details class="qa"><summary>Teen formats kyun? Sirf ek rakhte to?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>JSON</b> — machine-readable; dashboard, metrics (Sprint 4) aur automation ke liye source of truth</li>
+      <li><b>HTML</b> — browser mein instant share; CI artifact ke roop mein koi tool nahi chahiye</li>
+      <li><b>PDF</b> — submission/audit ke liye fixed layout, print-ready, email attachment ke liye</li>
+    </ul>
+    <p><b>Important design point:</b> teeno formats <i>same canonical model</i> se bante hain — isliye numbers kabhi mismatch nahi hote. Report ID bhi same rehta hai, jisse correlation easy ho jaata hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>PDF kaise generate kiya? Browser ya paid API kyun nahi?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p><b>ReportLab</b> use kiya — pure Python library jo directly report model se PDF banati hai.</p>
+    <p><b>Kyun ye better hai:</b></p>
+    <ul>
+      <li>Headless browser (Chromium/Puppeteer) ki zarurat nahi — CI mein heavy aur flaky</li>
+      <li>wkhtmltopdf jaisa external binary install nahi karna padta</li>
+      <li>Koi paid conversion service nahi → cost ₹0, aur scan data third-party ko nahi jaata</li>
+      <li>Deterministic output — tests mein <code>%PDF-</code> signature verify kar sakte hain</li>
+      <li>Pagination, repeating table headers, long value wrapping handle kiye</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>HTML report safe hai? Injection ka kya risk?<span class="tag t-sec">Security</span></summary>
+  <div class="body">
+    <p>Haan — Jinja2 autoescaping enabled hai (<code>select_autoescape(("html","xml","j2"))</code>).</p>
+    <p><b>Test bhi hai:</b> fixture mein package name deliberately rakha <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>. Test assert karta hai ki HTML output mein wahi string <i>escaped</i> form mein aaya (<code>&amp;lt;script&amp;gt;</code>) — raw script tag nahi.</p>
+    <p><b>Kyun real risk tha:</b> package/CVE names Trivy se aate hain, yaani untrusted input. Agar escaping na hoti to ek malicious package naam report mein script inject kar sakta tha (stored XSS jab report browser mein khulti).</p>
+  </div></details>
+
+  <details class="qa"><summary>Report manifest kya hai aur kyun zaroori hai?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p>Har report ke saath ek <code>&lt;name&gt;.manifest.json</code> likhta hoon jisme har output file ka format, media type, size aur <b>SHA-256 checksum</b> hota hai.</p>
+    <p><b>Kyun:</b></p>
+    <ul>
+      <li><b>Integrity:</b> checksum se verify kar sakte ho ki report modify nahi hui</li>
+      <li><b>Completeness:</b> manifest <i>last</i> likha jaata hai, isliye wo sirf fully-written files list karta hai — adhoori file nahi</li>
+      <li><b>Traceability:</b> report_id se scan artifacts, report aur Slack message correlate ho jaate hain</li>
+      <li><b>Atomic writes:</b> temp file par likh kar <code>os.replace()</code> se rename — reader ko kabhi half-written file nahi milti</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Scan artifact schema 1.0 mein kya add hua Sprint 3 mein?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>schema_version: "1.0"</code></td><td>Contract version — loader kuch aur accept nahi karta</td></tr>
+        <tr><td><code>scan_id</code> (UUID)</td><td>Har scan uniquely identify hota hai</td></tr>
+        <tr><td><code>scanned_at</code> (UTC)</td><td>Timezone-safe timestamp, traceability</td></tr>
+        <tr><td><code>scanner</code></td><td>Trivy + wrapper version</td></tr>
+        <tr><td><code>source</code></td><td>CI provider, repository, commit, run id/url (sanitized — koi secret nahi)</td></tr>
+      </tbody>
+    </table>
+    <p><b>Kyun versioned:</b> future sprint mein format badle to purane artifacts pata chal jaayenge aur loader clearly error dega — silent misinterpretation nahi hogi.</p>
+  </div></details>
+
+  <details class="qa"><summary>Loader kaunse validations karta hai?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <ul>
+      <li><code>schema_version == "1.0"</code> — raw Trivy ya legacy file par actionable error</li>
+      <li>Required fields maujood hain: scan_id, scanned_at, image, summary, findings, policy</li>
+      <li>Summary ke saare 5 severity keys non-negative integers hain</li>
+      <li><b>Count invariant:</b> har severity ka count findings se exactly match karta hai — mismatch par reject</li>
+      <li>At least ek artifact chahiye; period sirf <code>run|daily|weekly</code></li>
+    </ul>
+    <p><b>Why count check important:</b> agar summary aur findings inconsistent ho, to report jhoot bol sakti hai. Loader usko rendering se pehle hi rok deta hai — partial/incorrect report generate nahi hoti.</p>
+  </div></details>
+
+  <details class="qa"><summary>Slack alert ka design samjhao — severity-wise behaviour?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p><b>Immediate alert (per-run):</b> sirf tab bhejta hai jab highest severity <code>notifications.alert_on</code> (default HIGH) ke barabar ya upar ho. Neeche ho to intentionally skip (exit 0).</p>
+    <table>
+      <thead><tr><th>Severity</th><th>Style</th><th>Interpretation</th></tr></thead>
+      <tbody>
+        <tr><td>CRITICAL</td><td>Red / urgent</td><td>Immediate action</td></tr>
+        <tr><td>HIGH</td><td>Orange / action required</td><td>Fix before deploy</td></tr>
+        <tr><td>MEDIUM</td><td>Yellow / warning</td><td>Plan a fix</td></tr>
+        <tr><td>LOW</td><td>Blue / informational</td><td>Track</td></tr>
+        <tr><td>Clean summary</td><td>Green</td><td>No action</td></tr>
+      </tbody>
+    </table>
+    <p><b>Message content:</b> image names, severity counts, policy state (PASS/BLOCKED), cadence, report ID. Har CVE list nahi bhejte — warna message unusable long ho jaata hai; detail report attachment/artifact mein hoti hai.</p>
+    <p><b>Daily/weekly:</b> hamesha bhejte hain, chahe clean ho ya partially fail — kyunki cadence summary ek health signal hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Retry logic exactly kya hai?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Max 3 attempts</b>, exponential backoff + jitter, total backoff capped (~30s)</li>
+      <li><b>Retry</b> on: network/timeout errors, HTTP <code>408</code>, <code>425</code>, <code>429</code>, aur <code>5xx</code></li>
+      <li><b>Honour <code>Retry-After</code></b> — but bounded (10s tak), taaki provider humein bahut der na rokе</li>
+      <li><b>No retry</b> on other <code>4xx</code> (400/401/403/404) — kyunki wo configuration/authorization problem hai; repeat karne se fayda nahi</li>
+      <li><b>Timeout:</b> per-request 10 seconds</li>
+      <li><b>Exhausted → notifier exit 3</b> (operational failure), silent success nahi</li>
+    </ul>
+    <p><b>Tests:</b> transport, sleep aur randomness inject kiye — isliye tests fast hain aur kabhi Slack ko call nahi karte.</p>
+  </div></details>
+
+  <details class="qa"><summary>Webhook validation mein kaunse attacks consider kiye?<span class="tag t-sec">Security</span></summary>
+  <div class="body">
+    <p><code>validate_webhook()</code> mein ye checks hain:</p>
+    <ul>
+      <li><b>HTTPS only</b> — plaintext par secret na jaaye</li>
+      <li><b>Host allowlist</b> — sirf <code>hooks.slack.com</code> (aur <code>hooks.slack-gov.com</code>) — yaani arbitrary endpoint par data exfiltration nahi</li>
+      <li><b>Path prefix</b> <code>/services/</code> — valid webhook shape</li>
+      <li><b>Credentials reject</b> — URL mein <code>user:pass@</code> allow nahi</li>
+      <li><b>Fragment reject</b> — <code>#...</code> se confusion avoid</li>
+      <li><b>Port 443 only</b> — non-standard port se bypass na ho</li>
+      <li><b>Redirects refused</b> — custom <code>_NoRedirect</code> handler; warna validation redirect ke through bypass ho jaati</li>
+      <li><b>Never logged</b> — errors sanitized; URL/query/payload kabhi log nahi hote</li>
+    </ul>
+    <p><b>Ye kya type ka risk hai:</b> server-side request forgery (SSRF) jaisa behaviour aur secret leakage. Validation se attacker-controlled URL se data bahar nahi bheja ja sakta.</p>
+  </div></details>
+
+  <details class="qa"><summary>Notification failure se build fail hota hai ya nahi?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p>Failure precedence deliberately defined hai:</p>
+    <ul>
+      <li><b>Scanner policy authoritative hai.</b> Blocked image → build red, chahe Slack delivery successful ho</li>
+      <li>Notification <b>blocked build ko green nahi kar sakta</b> — reporting/alerting baad mein chalta hai, par build result restore hota hai</li>
+      <li>Scheduled summary jobs mein: policy block (exit 1) valid result hai (summary ka kaam hi vulnerabilities batana hai), lekin operational error (2/3) job fail karta hai</li>
+      <li>Notification exhaust ho jaaye to wo operational failure (exit 3) hai — scanner/config issue nahi</li>
+    </ul>
+    <p><b>Ek line:</b> "Security decision aur delivery success do alag cheezein hain; main unko mix nahi karta."</p>
+  </div></details>
+
+  <details class="qa"><summary>Daily/weekly summary ke liye naya scan kyun, purane reports aggregate kyun nahi?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p><b>Design decision:</b> har cadence par <code>--all-configured</code> se saare images freshly scan hote hain, aur usi invocation ke artifacts se summary banti hai.</p>
+    <p><b>Kyun:</b></p>
+    <ul>
+      <li>Summary hamesha <i>current</i> posture dikhata hai — stale result nahi</li>
+      <li>Koi history database nahi chahiye → simplicity aur zero infra cost</li>
+      <li>Cross-run artifact aggregation ki zarurat nahi (no GitHub Artifact API dependency, no workspace persistence)</li>
+      <li>Historical trends deliberately Sprint 4 ka kaam hai (Prometheus + Grafana) — isliye yahan duplicate nahi kiya</li>
+    </ul>
+    <p><b>Evidence:</b> Jenkins daily summary build #1 mein 4 fresh scan artifacts + daily report mile.</p>
+  </div></details>
+
+  <details class="qa"><summary>Slack hi kyun? Teams/email kyun nahi?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <p>Assignment mein "Slack <i>ya</i> Teams" tha — isliye <b>ek provider properly implement kiya</b>.</p>
+    <p>Lekin architecture provider-neutral hai: notifier ek protocol follow karta hai (payload builder + delivery + retry), aur Slack uska ek implementation hai. Teams add karna ho to sirf naya adapter likhna padega — reporters aur CI pipelines bilkul nahi badlenge.</p>
+    <p><b>Yahi extensibility examiner ko dikhani hai:</b> "ek provider complete, lekin design multi-provider ready."</p>
+  </div></details>
+
+  <details class="qa"><summary>Scan-controlled values se mention abuse kaise roka (@channel)?<span class="tag t-sec">Security</span></summary>
+  <div class="body">
+    <p>Slack mein <code>@channel</code>/<code>@here</code> likhne se poore channel ko notify kiya ja sakta hai — ye ek abuse vector hai.</p>
+    <p>Isliye <code>_clean()</code> helper scan se aane wali har value ko:</p>
+    <ul>
+      <li>Truncate karta hai (default 180 chars) — payload blowup aur visual spam se bachaav</li>
+      <li><code>@channel</code> aur <code>@here</code> ko neutralize karta hai</li>
+    </ul>
+    <p>Test bhi hai: image name <code>@channel app</code> set karke verify kiya ki payload mein mention nahi jaata.</p>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 3 ke GitHub aur Jenkins evidence kya hain?<span class="tag t-s3">Sprint 3</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th>Platform</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Local</td><td>28 tests pass; <code>alpine:3.19</code> exit 1, <code>hello-world</code> exit 0; JSON+HTML+PDF+manifest generate hue</td></tr>
+        <tr><td>GitHub Actions</td><td>Run #13: report generation step success, 1 artifact bundle (<code>vulnerability-evidence-13</code>, 5,865 bytes)</td></tr>
+        <tr><td>Jenkins main pipeline</td><td>Build #2 success (reports archived), build #3 policy-blocked (reports still archived)</td></tr>
+        <tr><td>Jenkins summaries</td><td>Daily build #1 (59s) aur weekly build #1 (40s) — dono mein 4 fresh scan artifacts + report</td></tr>
+        <tr><td>Scheduling</td><td><code>H 2 * * *</code> daily, <code>H 3 * * 1</code> weekly (UTC), next run timestamp verified</td></tr>
+        <tr><td>Pending</td><td>Real Slack delivery (workspace webhook configure hona baaki hai)</td></tr>
+      </tbody>
+    </table>
+  </div></details>
+</section>
+
+<!-- ============ E. SPRINT 4 ============ -->
+<section id="s4">
+  <h2>E. Sprint 4 — Web dashboard for historical tracking (planned)</h2>
+  <div class="callout warn"><b>Honest framing:</b> Sprint 4 implement nahi hua hai. Bolna aise: "Sprint 4 ka requirement dashboard + Prometheus + Grafana hai; humara Sprint 3 ka report JSON exactly wo data deta hai jo metrics banane ke liye chahiye, aur design freeze ho chuka hai." Iske baad design confidently explain karo.</div>
+
+  <details class="qa"><summary>Sprint 4 ka requirement kya hai?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <p>Assignment ke mutabika:</p>
+    <ul>
+      <li>Grafana (ya custom UI) par simple web dashboard setup karna</li>
+      <li>Dashboard ko Prometheus se connect karke vulnerabilities found / resolved / pending ke metrics dikhana</li>
+      <li>Filters implement karna — specific images, date ranges, vulnerability severity</li>
+      <li>Dashboard ko usability aur responsiveness ke liye test aur refine karna</li>
+    </ul>
+    <p><b>Goal:</b> historical view + trend analysis — "pichhle 30 din mein HIGH vulnerabilities badhe ya ghate?"</p>
+  </div></details>
+
+  <details class="qa"><summary>Prometheus aur Grafana mein difference kya hai?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th></th><th>Prometheus</th><th>Grafana</th></tr></thead>
+      <tbody>
+        <tr><td>Role</td><td>Time-series database + metrics collector</td><td>Visualisation layer</td></tr>
+        <tr><td>Kaam</td><td>Metrics scrape/store karta hai, alert rules bhi rakh sakta hai</td><td>Graphs, panels, dashboards banana; multiple data sources connect karna</td></tr>
+        <tr><td>Data</td><td><code>metric_name{label="value"} number timestamp</code></td><td>Data store nahi karta (Prometheus ko query karta hai)</td></tr>
+      </tbody>
+    </table>
+    <p><b>Ek line:</b> "Prometheus data rakhta hai, Grafana usko dikhata hai."</p>
+  </div></details>
+
+  <details class="qa"><summary>Prometheus pull model use karta hai — to humara scanner metrics kaise expose karega?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <p>Ye sabse technical Sprint 4 sawaal hai. Do options the:</p>
+    <ol>
+      <li><b>Scanner ko long-running HTTP service banana</b> jisme <code>/metrics</code> endpoint ho — lekin ye CI job ke liye galat model hai, kyunki scan ke baad process exit ho jaata hai.</li>
+      <li><b>Prometheus textfile collector (chosen design):</b> scan ke baad ek chhota exporter script report JSON padhta hai aur ek <code>.prom</code> file likhta hai jisme metrics text format mein hote hain. Node exporter ka textfile collector usko expose karta hai, aur Prometheus scrape karta hai.</li>
+    </ol>
+    <pre># reports/vulnerability-daily-xxx.json
+#        ↓  metrics exporter
+vulnerability_findings{image="alpine:3.19",severity="HIGH"} 2
+vulnerability_blocking_total{image="alpine:3.19"} 2
+vulnerability_policy_blocked{image="alpine:3.19"} 1
+scan_duration_seconds{image="alpine:3.19"} 12.4
+scan_failures_total 0</pre>
+    <p><b>Kyun ye better hai:</b> CI job ke ephemeral nature ke saath compatible, koi always-on service nahi chahiye, aur same exporter local aur CI dono jagah chalta hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Kaunse metrics define karoge?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th>Metric</th><th>Type</th><th>Labels</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>vulnerability_findings</code></td><td>Gauge</td><td>image, severity</td><td>Current counts per severity</td></tr>
+        <tr><td><code>vulnerability_blocking_total</code></td><td>Gauge</td><td>image</td><td>Threshold cross karne wale findings</td></tr>
+        <tr><td><code>vulnerability_policy_blocked</code></td><td>Gauge</td><td>image</td><td>1 = blocked, 0 = passed (gate state)</td></tr>
+        <tr><td><code>scan_duration_seconds</code></td><td>Gauge</td><td>image</td><td>Scan time — performance trend</td></tr>
+        <tr><td><code>scan_artifacts_total</code></td><td>Counter</td><td>period</td><td>Kitne scans hue (activity)</td></tr>
+        <tr><td><code>scan_failures_total</code></td><td>Counter</td><td>image, reason</td><td>Operational failures — reliability</td></tr>
+        <tr><td><code>report_generated_timestamp</code></td><td>Gauge</td><td>period</td><td>Ye report kab bani (staleness detect)</td></tr>
+      </tbody>
+    </table>
+    <p><b>"Resolved" metric kaise:</b> current count aur peechhle count ka difference. Prometheus mein <code>delta()</code>/<code>increase()</code> se trend nikalta hai, ya Grafana transform se "previous value minus current" dikha sakte hain.</p>
+  </div></details>
+
+  <details class="qa"><summary>Grafana dashboard mein kaunse panels honge?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Severity breakdown (stat panels):</b> Critical/High/Medium/Low current counts</li>
+      <li><b>Trend over time (time series):</b> <code>vulnerability_findings</code> by severity — badh raha hai ya ghat raha hai</li>
+      <li><b>Per-image table:</b> image, blocking findings, policy state — kis image par focus karna hai</li>
+      <li><b>Blocked vs passed:</b> gate effectiveness over time</li>
+      <li><b>Top vulnerable images:</b> sorted bar chart</li>
+      <li><b>Scan health:</b> scan duration + failure counter (pipeline reliability)</li>
+      <li><b>Staleness indicator:</b> last report timestamp — agar stale ho to dashboard turant bataye</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Filters requirement kaise pura karoge?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <p>Grafana ke <b>template variables</b> se:</p>
+    <ul>
+      <li><b>Image filter:</b> label values se dropdown — <code>label_values(vulnerability_findings, image)</code></li>
+      <li><b>Severity filter:</b> <code>label_values(vulnerability_findings, severity)</code> — multi-select</li>
+      <li><b>Date range:</b> Grafana ka built-in time picker (last 7/30/90 days, custom)</li>
+      <li><b>Cadence filter:</b> daily vs weekly reports</li>
+    </ul>
+    <p>Ye variables panels ke queries mein interpolate ho jaate hain — isliye ek hi dashboard me sab filters lagte hain, alag page nahi banane padte.</p>
+  </div></details>
+
+  <details class="qa"><summary>Dashboard kahan host karoge? Cost?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <p>Docker Compose se local: Prometheus + Grafana (+ node exporter textfile collector). Koi managed service nahi.</p>
+    <ul>
+      <li>Both open source, community editions free</li>
+      <li>Local Docker → koi cloud bill nahi</li>
+      <li>Prometheus retention chhota (15 days) — disk usage minimal</li>
+      <li>CI se metrics persist karne ke liye simple approach: GitHub Actions par metrics file artifact push, ya Jenkins par archive — full remote push gateway design Sprint 4 ka open item hai</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Custom dashboard (Flask + Chart.js) kyun nahi? Grafana kyun better?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <p>Assignment "Grafana (or a custom UI)" deta hai — dono valid hain. Grafana chuna kyunki:</p>
+    <ul>
+      <li>Time-series queries, aggregation aur retention Prometheus handle karta hai — humein khud datetime logic nahi likhni</li>
+      <li>Filters, zoom, refresh, alerting built-in</li>
+      <li>Custom UI mein humein storage, API, auth aur chart rendering sab likhna padta — scope creep</li>
+      <li>Industry-standard tool — examiner ke liye familiar, aur CV/resume value bhi</li>
+    </ul>
+    <p><b>Custom UI ka ek valid use case bhi bata sakte ho:</b> agar sirf "latest report dikhana" ho (no history), to Sprint 3 ki HTML report hi sufficient hai — isliye Sprint 4 mein Grafana ka historical role justify hota hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 3 aur Sprint 4 ka connection kya hai?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <p>Sprint 3 ka <b>canonical report JSON</b> hi Sprint 4 ka data source hai. Isliye:</p>
+    <ul>
+      <li>Rescan ki zarurat nahi — exporter sirf existing report padhta hai</li>
+      <li>Metrics ki values report ke totals se aati hain, isliye dashboard aur report kabhi contradict nahi karte</li>
+      <li>Kyunki report mein <code>generated_at</code> aur <code>report_id</code> hai, traceability dashboard se report tak jaati hai</li>
+    </ul>
+    <p><b>Yahi "architecture planned up-front" ka proof hai:</b> Sprint 3 ne Sprint 4 ke liye data shape already bana diya.</p>
+  </div></details>
+
+  <details class="qa"><summary>Dashboard ki security?<span class="tag t-s4">Sprint 4</span></summary>
+  <div class="body">
+    <ul>
+      <li>Local/Docker network par bind — public internet par expose nahi</li>
+      <li>Grafana admin credentials change kiye jaate hain, default nahi</li>
+      <li>Prometheus sirf internal scrape karta hai (koi public endpoint nahi)</li>
+      <li>Metrics mein secrets nahi hote — sirf counts aur image names (koi webhook, koi registry credential)</li>
+      <li>Agar remote access chahiye to reverse proxy + auth/TLS ke peeche rakhenge</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ F. SPRINT 5 ============ -->
+<section id="s5">
+  <h2>F. Sprint 5 — Exceptions &amp; advanced handling (planned)</h2>
+  <div class="callout warn"><b>Honest framing:</b> "Sprint 5 ka requirement CVE allowlist, rescan aur retry hardening hai. Repository mein <code>exceptions/allowlist.yaml</code> ka structure already design ho chuka hai, aur scanner usko <code>exceptions_file</code> config key se reference karta hai — implementation Sprint 5 mein hai."</div>
+
+  <details class="qa"><summary>Sprint 5 ka requirement kya hai?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <ul>
+      <li>Scanner ko customise karna taaki user-defined exceptions (approved known vulnerabilities) skip ho sakein</li>
+      <li>Rescan functionality — kuch period ke baad ya patch hone par image dobara scan ho</li>
+      <li>CI/CD integration ke liye retry logic aur error handling</li>
+      <li>Exception handling test karna aur ensure karna ki users known vulnerabilities manage/track kar sakein</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Allowlist/exception ki zarurat kyun hai? Bina uske kya problem?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <p>Real world mein kuch vulnerabilities deliberately accept ki jaati hain:</p>
+    <ul>
+      <li><b>Fix available nahi hai</b> upstream (no fix version)</li>
+      <li><b>Not exploitable</b> humari usage mein (jaise vulnerable code path use hi nahi hota)</li>
+      <li><b>False positive</b> — package installed nahi ya detect galat hua</li>
+      <li><b>Compensating control</b> lagaya hua hai (network isolation, WAF)</li>
+    </ul>
+    <p><b>Bina allowlist ke:</b> build permanently red rehta hai → team gate ko bypass karna shuru kar deti hai (<code>continue-on-error</code>, manual override). Yaani security control ka credibility khatam.</p>
+    <p><b>Allowlist ke saath:</b> gate credible rehta hai kyunki genuine blocks remain, aur approved exceptions documented + reviewable hote hain.</p>
+  </div></details>
+
+  <details class="qa"><summary>Exception file ka format kya rakhoge aur kyun?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <pre>exceptions:
+  - id: CVE-2023-12345
+    reason: "No fix available upstream; not reachable in our usage"
+    expires: 2026-12-31
+  - id: CVE-2024-99999
+    reason: "False positive — package not actually installed"
+    expires: 2026-09-30</pre>
+    <p>Har entry mein teen cheezein zaroori hain:</p>
+    <ul>
+      <li><b>id</b> — specific CVE (wildcard nahi, warna blanket suppression ho jaayegi)</li>
+      <li><b>reason</b> — justification; audit ke liye mandatory</li>
+      <li><b>expires</b> — <b>sabse important field.</b> Iske bina allowlist "permanent security hole" ban jaati hai. Expiry ke baad exception automatically invalid ho jaaye, aur finding phir se block kare.</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Filtering kis layer par hogi — scanner mein ya reporter mein?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <p><b>Design decision: scanner layer mein, policy evaluation se pehle.</b></p>
+    <p><b>Reasoning:</b></p>
+    <ul>
+      <li>Exception ka matlab hai "ye finding approved hai" — isliye wo <b>gate decision</b> ko affect karni chahiye, sirf display ko nahi</li>
+      <li>Agar sirf reporter filter karta, to build phir bhi red hota — exception ka koi fayda nahi</li>
+      <li>Lekin <b>audit ke liye record rakhna zaroori hai</b>: artifact/report mein "suppressed" list aani chahiye, taaki chhupaya hua na lage</li>
+    </ul>
+    <pre>Trivy findings
+      ↓
+exception filter (allowlist + expiry check)
+      ├──→ active findings  → policy evaluation → gate decision
+      └──→ suppressed list  → artifact + report mein "approved exception" section</pre>
+    <p><b>Ek line:</b> "Suppress karo, chhupao nahi."</p>
+  </div></details>
+
+  <details class="qa"><summary>Expired exception ka behaviour kya hoga?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <p>Expiry date guzar jaane par exception <b>automatically invalid</b> ho jaayegi — finding phir se active maani jaayegi aur policy usko evaluate karegi (HIGH/CRITICAL ho to build block).</p>
+    <p><b>Isse kya hota hai:</b> exceptions silently zinda nahi rehti. Agar team chahti hai ki exception chalti rahe, to wo consciously date extend karegi — yaani periodic review forced ho jaata hai.</p>
+    <p><b>Bonus behaviour jo implement kar sakte ho:</b> expiry ke 14 din pehle report mein "expiring soon" warning dikhana, taaki team proactive rahe.</p>
+  </div></details>
+
+  <details class="qa"><summary>Trivy ka apna <code>--ignorefile</code>/<code>.trivyignore</code> hai — to custom implementation kyun?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <p>Achha counter-sawaal hai. Honest answer:</p>
+    <ul>
+      <li>Trivy ka <code>.trivyignore</code> CVEs suppress kar sakta hai, <b>lekin usme reason, expiry, owner ya audit metadata nahi hota</b> — bas ek ID list</li>
+      <li>Humara format <code>reason</code> + <code>expires</code> enforce karta hai, isliye governance built-in hai</li>
+      <li>Humara filtering scanner ke andar hai (policy se pehle), to suppressed findings ko report mein separately record kar sakte hain</li>
+      <li><b>Practical hybrid:</b> implementation mein hum <code>.trivyignore</code> format ko internally reuse kar sakte hain (compatibility ke liye) aur apni YAML ko usme translate kar sakte hain — isse do implementations maintain nahi karni padti</li>
+    </ul>
+    <p><b>Isse ye dikhta hai</b> ki tum existing tool capabilities jaante ho, blind reinvention nahi kar rahe.</p>
+  </div></details>
+
+  <details class="qa"><summary>Rescan functionality kya propose karte ho?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <p>Teen triggers pe rescan:</p>
+    <ol>
+      <li><b>Scheduled rescan</b> — existing daily/weekly summary jobs already har baar fresh scan karte hain (Sprint 3 se), isliye ek image ke liye bhi periodic coverage maujood hai</li>
+      <li><b>Database refresh ke baad</b> — naya CVE add hone par purani "clean" image ab vulnerable ho sakti hai. Isliye DB update ke baad critical images rescan karna chahiye</li>
+      <li><b>Image digest change par</b> — naya patch deploy hua to dobara verify karo (same tag, naya digest)</li>
+    </ol>
+    <p><b>Implementation note:</b> rescan ke liye naya logic nahi chahiye — wahi <code>scanner.trivy_scanner</code> command dobara chal jaati hai. Isliye ye already Sprint 3 scheduling se effectively available hai; Sprint 5 mein hum isko explicit policy aur reporting ke saath formalise karenge.</p>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 5 mein retry/error handling kya add karoge? Sprint 2/3 mein nahi hai?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <p>Sprint 2/3 mein kuch retry already hai: Jenkins mein DB refresh par <code>retry(2)</code>, aur Slack delivery mein bounded 3-attempt retry.</p>
+    <p>Sprint 5 mein ye expand karenge:</p>
+    <ul>
+      <li><b>Registry pull flakiness:</b> image pull transient failure par bounded retry (network hiccup se build red na ho)</li>
+      <li><b>Trivy DB download retry</b> with backoff (Sprint 2 mein sirf Jenkins mein tha, use cross-platform karna)</li>
+      <li><b>Failure classification:</b> transient (retry karo) vs permanent (turant fail) — jaise "image not found" retry karne ka koi fayda nahi</li>
+      <li><b>Clear diagnostics:</b> failure par actionable message — config problem ho to exact key batao, registry problem ho to registry URL (credentials ke bina)</li>
+    </ul>
+    <p><b>Principle:</b> retry sirf transient failures par, aur <b>fail-closed</b> — retry exhaust hone par build fail, kabhi silent pass nahi.</p>
+  </div></details>
+
+  <details class="qa"><summary>Allowlist ka misuse kaise rokoge?<span class="tag t-sec">Security</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Expiry mandatory</b> — permanent suppression impossible</li>
+      <li><b>Reason mandatory</b> — reviewer ko justification dikhti hai</li>
+      <li><b>Code review:</b> allowlist file repository mein hai, isliye change PR review se guzarta hai</li>
+      <li><b>Ownership:</b> CODEOWNERS se security owner ka approval required kiya ja sakta hai</li>
+      <li><b>Visibility:</b> suppressed findings report mein alag section mein dikhti hain — silent disappearance nahi</li>
+      <li><b>Scoping:</b> exception ek specific CVE ke liye, specific image ke liye — blanket wildcard nahi</li>
+      <li><b>Metrics:</b> Sprint 4 dashboard par "suppressed count" track karo — sudden increase red flag</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Exception handling ka testing kaise karoge?<span class="tag t-test">Testing</span></summary>
+  <div class="body">
+    <ul>
+      <li>Fixture: ek artifact jisme CVE-X HIGH hai</li>
+      <li><b>Test 1:</b> allowlist mein CVE-X active hai → policy pass (exit 0), aur suppressed list mein CVE-X record hua</li>
+      <li><b>Test 2:</b> same CVE-X ka <code>expires</code> past mein hai → exception ignore, policy block (exit 1)</li>
+      <li><b>Test 3:</b> allowlist mein CVE-Y hai lekin finding CVE-X → CVE-X block hota hai (koi over-suppression nahi)</li>
+      <li><b>Test 4:</b> malformed allowlist YAML → exit 2, fail-closed</li>
+      <li><b>Test 5:</b> reason/expires missing → validation error</li>
+    </ul>
+    <p><b>Important:</b> tests fully offline aur deterministic — fixtures par based, real CVE DB par nahi.</p>
+  </div></details>
+
+  <details class="qa"><summary><code>--ignore-unfixed</code> aur allowlist mein difference?<span class="tag t-s5">Sprint 5</span></summary>
+  <div class="body">
+    <table>
+      <thead><tr><th></th><th><code>--ignore-unfixed</code></th><th>Allowlist</th></tr></thead>
+      <tbody>
+        <tr><td>Kya hide karta hai</td><td>Wo saari vulnerabilities jinka fix nahi hai (blank Fixed Version)</td><td>Specific CVEs jo team ne review karke approve kiye</td></tr>
+        <tr><td>Granularity</td><td>Global rule, sabke liye</td><td>Per-CVE, documented reason ke saath</td></tr>
+        <tr><td>Audit trail</td><td>Koi nahi</td><td>Reason + expiry + approval</td></tr>
+        <tr><td>Kaun decide karta hai</td><td>Scanner capability</td><td>Security team ka governance decision</td></tr>
+      </tbody>
+    </table>
+    <p><b>Ek line:</b> "<code>--ignore-unfixed</code> ek technical shortcut hai, allowlist ek governance control hai."</p>
+  </div></details>
+</section>
+
+<!-- ============ G. CROSS-CUTTING ============ -->
+<section id="cross">
+  <h2>G. Cross-cutting — DevSecOps, testing, security, cost</h2>
+
+  <details class="qa"><summary>DevSecOps kya hai aur aapke project mein kaise apply hua?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p>DevSecOps ka matlab — security ko development aur operations ke saath integrate karna, alag "security gate" ki tarah end mein nahi.</p>
+    <p>Humare project mein:</p>
+    <ul>
+      <li><b>Shift left:</b> scan developer ke push par hi hota hai, deploy se pehle (CI gate)</li>
+      <li><b>Automation:</b> koi manual check nahi — GitHub Actions aur Jenkins dono automatically chalte hain</li>
+      <li><b>Policy as code:</b> threshold <code>config.yaml</code> mein, review aur version control ke saath</li>
+      <li><b>Observability:</b> JSON/HTML/PDF reports + Slack alerts + (Sprint 4) dashboard</li>
+      <li><b>Governance:</b> exceptions documented, expiring (Sprint 5)</li>
+      <li><b>Fail-safe:</b> scanner fail ho to build fail — "unknown" ko "safe" nahi maana</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Kitne tests hain aur kis type ke?<span class="tag t-test">Testing</span></summary>
+  <div class="body">
+    <p><b>28 tests</b>, sab deterministic aur offline (~3 seconds mein complete).</p>
+    <table>
+      <thead><tr><th>Area</th><th>Kya cover hua</th></tr></thead>
+      <tbody>
+        <tr><td>Scanner core</td><td>Trivy command construction, JSON parsing, null vulnerabilities, invalid JSON, missing executable</td></tr>
+        <tr><td>Policy</td><td>Threshold boundaries (CRITICAL/HIGH/MEDIUM/LOW), blocking count, UNKNOWN handling</td></tr>
+        <tr><td>Configuration</td><td>CLI &gt; env &gt; YAML precedence, strict boolean parsing, invalid severity/timeout rejection</td></tr>
+        <tr><td>CLI exits</td><td>0 pass, 1 block, 2 config error, 3 operational, multi-image precedence</td></tr>
+        <tr><td>Reporting</td><td>Schema validation, count-invariant rejection, aggregation totals, unknown format rejection</td></tr>
+        <tr><td>Rendering</td><td>Same report ID across formats, <code>%PDF-</code> signature, HTML escaping of hostile input</td></tr>
+        <tr><td>Notifications</td><td>Unsafe webhook rejection, mention sanitization, severity colour, retry on 429, no retry on 400, secret-safe errors</td></tr>
+      </tbody>
+    </table>
+    <p><b>Kya nahi hai (honest):</b> live Trivy/Docker integration tests deliberately CI mein hain (real scan wahan hota hai), aur end-to-end tests mock se avoid kiye kyunki wo flaky hote.</p>
+  </div></details>
+
+  <details class="qa"><summary>Supply-chain security ke liye kya kiya?<span class="tag t-sec">Security</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Trivy version pinned</b> (0.74.0) — na Docker image mein <code>:latest</code>, na CI mein floating version. Isse same scan engine reproducible rehta hai.</li>
+      <li><b>Third-party actions</b> pinned release tags par</li>
+      <li><b>Python dependencies bounded ranges</b> (jaise Jinja2 &gt;=3.1,&lt;4.0, ReportLab &gt;=4.2,&lt;5.0) — breaking major version automatically nahi aayega</li>
+      <li><b>Base image</b> <code>python:3.12-slim</code> — minimal attack surface</li>
+    </ul>
+    <p><b>Aage ka plan (Sprint 6):</b> dependency vulnerability scan of our own codebase, aur actions ko commit SHA par pin karna.</p>
+  </div></details>
+
+  <details class="qa"><summary>Docker socket mount kyun nahi kiya?<span class="tag t-sec">Security</span></summary>
+  <div class="body">
+    <p>Trivy ko local images scan karne ke liye kuch log <code>/var/run/docker.sock</code> mount karte hain — lekin us socket ka access yaani <b>host par root-equivalent control</b> (koi bhi container chala sakte, host filesystem touch kar sakte).</p>
+    <p>Hum registry reference par scan karte hain (<code>trivy image nginx:latest</code>), jisme Trivy khud image registry se pull karta hai — socket ki zarurat nahi. Isliye CI mein socket mount avoid kiya.</p>
+  </div></details>
+
+  <details class="qa"><summary>Observability — kaise prove karoge ki scan actually hua?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p>Multi-layer evidence chain:</p>
+    <ol>
+      <li><b>Scan artifact:</b> <code>scan_id</code>, <code>scanned_at</code> (UTC), image, findings, policy result</li>
+      <li><b>Report:</b> <code>report_id</code>, <code>generated_at</code>, totals, per-image detail</li>
+      <li><b>Manifest:</b> SHA-256 checksums — integrity proof</li>
+      <li><b>CI logs:</b> GitHub run number + Jenkins build number, step-level success/failure</li>
+      <li><b>Source metadata:</b> artifact mein commit SHA, repo, run/build URL</li>
+      <li><b>Slack message:</b> report ID ke saath — human-visible notification</li>
+    </ol>
+    <p><b>Ek line:</b> "Report ID se main scan artifact, CI run aur Slack message tak trace kar sakta hoon."</p>
+  </div></details>
+
+  <details class="qa"><summary>Branching strategy kya rahi?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <p>Har sprint ka apna branch: <code>sprint-1</code>, <code>sprint-2</code>, <code>sprint-3</code>.</p>
+    <ul>
+      <li>Assignment ne bhi sprint branch reference diya tha (e.g. <code>/tree/sprint-1</code>)</li>
+      <li>Sprint-wise review aur evaluation easy ho jaati hai</li>
+      <li>Har sprint self-contained rehta hai — previous sprint ka verified state freeze ho jaata hai</li>
+      <li><code>main</code> clean deliverable ke liye reserved</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 6 mein kya karna hai?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <ul>
+      <li>Comprehensive documentation — setup, usage, troubleshooting</li>
+      <li>Deployment script — ek command se poora setup (Python env, Trivy, Slack config)</li>
+      <li>Cross-platform testing — Jenkins aur GitHub Actions dono par final validation</li>
+      <li>Beta user feedback integrate karna</li>
+    </ul>
+    <p><b>Aaj already ready hai:</b> README mein Sprint 3 tak ka usage, schema docs, screenshot checklists, aur teen sprint reports. Sprint 6 mein ye sab consolidate aur automate hoga.</p>
+  </div></details>
+
+  <details class="qa"><summary>Agar production scale (500 images) ho to kya change karoge?<span class="tag t-arch">Architecture</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>Parallelism:</b> images ko matrix/batches mein scan karo — sequential 500 scans bahut slow</li>
+      <li><b>Registry mirrors aur caching:</b> repeated pulls kam karo</li>
+      <li><b>Distributed DB cache:</b> shared volume ya OCI registry se Trivy DB serve karo</li>
+      <li><b>Remote write:</b> Prometheus remote-write/Pushgateway se centralized metrics</li>
+      <li><b>Policy engine upgrade:</b> OPA/Rego jaisi policy language, taaki complex rules (per-team exemptions) manage ho sakein</li>
+      <li><b>Queue + async:</b> scan requests queue mein, worker pool</li>
+      <li><b>Storage:</b> reports object storage (S3) mein, retention lifecycle ke saath</li>
+    </ul>
+    <p><b>Lekin core design same rahega</b> — scanner, report model aur notifier separate hain, isliye scaling orchestration layer mein hoti hai, core logic mein nahi.</p>
+  </div></details>
+</section>
+
+<!-- ============ H. TRAPS ============ -->
+<section id="traps">
+  <h2>H. Viva traps — mushkil sawaal aur safe jawab</h2>
+  <p class="secnote">Ye wo questions hain jinme examiner aapko test karta hai. Honest + confident rehna.</p>
+
+  <details class="qa"><summary>"Ye to bas Trivy ka wrapper hai" — kya bologe?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <p><b>Answer:</b> "Trivy scanning engine hai, lekin project ka value uske aas-paas ke system mein hai:"</p>
+    <ul>
+      <li><b>Policy engine:</b> Trivy batata hai vulnerabilities kya hain; <i>hum</i> decide karte hain kaunsa finding build block karega, aur wo decision config-driven hai</li>
+      <li><b>Stable exit contract:</b> Trivy ka non-zero exit code "policy block" aur "scanner crash" mein farq nahi karta — humara wrapper karta hai (0/1/2/3)</li>
+      <li><b>Normalisation:</b> versioned schema 1.0 — isse aage reporting, dashboard aur audit possible hoti hai</li>
+      <li><b>Multi-platform consistency:</b> ek hi command GitHub Actions, Jenkins aur local par — koi drift nahi</li>
+      <li><b>Reporting + delivery + governance:</b> JSON/HTML/PDF with checksums, Slack alerts, aur (Sprint 5) exception management — ye Trivy nahi deta</li>
+    </ul>
+    <p><b>Analogy bol sakte ho:</b> "Trivy ek engine hai, humne usko poora vehicle banaya — policy, dashboard, brakes (gate) aur warning lights (alerts)."</p>
+  </div></details>
+
+  <details class="qa"><summary>Tumne sirf OS packages scan kiye — language dependencies miss ho rahi hain. Ye galat nahi?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <p><b>Accept karo, phir justify karo:</b></p>
+    <ul>
+      <li>Sprint 1 mein ye <b>deliberate</b> tha — multiple base images ko fairly compare karne ke liye package scope fix karna zaroori tha</li>
+      <li>Ye config-driven hai (<code>pkg_types: [os]</code>) — ek line change se full scan ho jaata hai</li>
+      <li>Evidence bhi hai: <code>node:18</code> scan mein jaise hi Java/npm analysis involve hua, scan heavy ho gaya (Java DB ~913 MB) — isliye scope control ki zarurat thi</li>
+    </ul>
+    <p><b>Aage ka plan:</b> "Sprint 6 mein production configuration <code>pkg_types: [os, library]</code> hogi, aur har image type ke hisaab se timeout tune karunga."</p>
+  </div></details>
+
+  <details class="qa"><summary>Trivy false positives dega to? Aapka gate galat block karega?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <ul>
+      <li>Low false-positive rate par bhi possible hai — jaise vulnerable code path use nahi hota</li>
+      <li>Iska solution <b>allowlist</b> hai (Sprint 5): specific CVE, documented reason, expiry date ke saath approve karo</li>
+      <li>Saath hi severity tuning: agar MEDIUM noise kar raha hai to <code>fail_on</code> HIGH/CRITICAL rakho (by default wahi hai)</li>
+      <li>Suppressed findings report mein dikhte hain — silently chhupte nahi, isliye visibility poori rehti hai</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Agar Trivy DB stale ya unreachable ho to?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <p><b>Fail-closed behaviour:</b> DB download fail hone par scanner error throw karta hai → exit 3 → build fail. Ye intentional hai: "unknown" ko "safe" nahi maana jaata.</p>
+    <p><b>Practical handling:</b></p>
+    <ul>
+      <li>CI mein DB refresh alag step hai (bounded retry ke saath) — taki transient network issue build block na kare</li>
+      <li>DB cache use hota hai, isliye repeat runs mein download ki zarurat nahi</li>
+      <li>Offline/air-gapped environment ke liye <code>--skip-db-update</code> option documented hai</li>
+      <li>Report mein <code>scanned_at</code> hota hai — agar DB purana tha, to staleness detect ho jaati hai</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Private registry ke images kaise scan karoge?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <ul>
+      <li>Trivy registry credentials support karta hai (<code>TRIVY_USERNAME</code>/<code>TRIVY_PASSWORD</code> ya docker config)</li>
+      <li>Design principle: credentials sirf CI secret/credential store se aayenge — config file mein kabhi nahi</li>
+      <li>Image reference mein credentials embed nahi karte (jaise <code>user:pass@registry/image</code>) — warna log aur artifact mein leak ho jaate</li>
+      <li>GitHub par masked secrets, Jenkins par credentials binding</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>Sprint 4 aur 5 abhi implement nahi hain — viva mein kaise defend karoge?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <p><b>Honesty + design clarity se defend karo:</b></p>
+    <blockquote>"Sprint 1, 2 aur 3 complete aur verified hain — evidence ke saath. Sprint 4 aur 5 ka scope dashboard aur exception handling hai, aur unke liye required interfaces already bane hue hain:"</blockquote>
+    <ul>
+      <li>Sprint 4 ko Sprint 3 ka canonical report JSON chahiye — wo maujood hai, isliye exporter + Grafana wiring bacha hai</li>
+      <li>Sprint 5 ko <code>exceptions/allowlist.yaml</code> aur <code>exceptions_file</code> config key chahiye — structure design ho chuka hai</li>
+      <li><code>dashboard/</code> aur <code>exceptions/</code> folders Sprint 1 se reserved hain — yaani plan upfront tha</li>
+    </ul>
+    <p><b>Ye dikhata hai</b> ki tum incremental delivery kar rahe ho, aur architecture aage ke sprints ke liye ready hai — jo assignment ka spirit hai.</p>
+  </div></details>
+
+  <details class="qa"><summary>Top 3 learnings kya rahe?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <ol>
+      <li><b>Security control ka credibility evidence par depend karta hai:</b> agar build block hone par log/artifact na mile, team gate ko trust nahi karti. Isliye "evidence before failure" pattern banaya.</li>
+      <li><b>"Fail" ke multiple meanings hote hain:</b> vulnerability mila (exit 1) aur scanner toota (exit 3) — inko alag rakhna ek real security design decision hai.</li>
+      <li><b>CI environment par assumptions nahi karne chahiye:</b> Jenkins agent par na <code>python3-venv</code>, na Trivy, aur shell bash nahi dash tha. Pipeline ko self-bootstrapping banaya.</li>
+    </ol>
+  </div></details>
+
+  <details class="qa"><summary>Agar examiner bole "dashboard banao bina Prometheus ke" — kya karoge?<span class="tag t-trap">Viva traps</span></summary>
+  <div class="body">
+    <p>Do valid options present karo:</p>
+    <ol>
+      <li><b>Lightweight:</b> Sprint 3 ki HTML report hi "latest state dashboard" hai — summary cards, per-image policy state, findings tables. No extra infra. (Ye already exist karta hai.)</li>
+      <li><b>Custom UI:</b> Flask/FastAPI + SQLite + Chart.js — reports ko ingest karke history table banayein. Isme humein storage, API, auth aur charts sab likhna padega — zyada code, less standard.</li>
+    </ol>
+    <p><b>Recommendation:</b> "Agar history aur trends chahiye to Prometheus + Grafana better engineering choice hai — kam code, better retention, standard tooling. Agar sirf latest status chahiye to Sprint 3 ki HTML report hi sufficient hai."</p>
+  </div></details>
+</section>
+
+<!-- ============ I. RAPID FIRE ============ -->
+<section id="rapid">
+  <h2>I. Rapid fire — one-line answers</h2>
+  <p class="secnote">Examiner jaldi jaldi pooche to ye values turant bol do.</p>
+  <table>
+    <thead><tr><th>Sawaal</th><th>Jawab</th></tr></thead>
+    <tbody>
+      <tr><td>Trivy version?</td><td>0.74.0</td></tr>
+      <tr><td>Wrapper version?</td><td>0.3.0</td></tr>
+      <tr><td>Default <code>fail_on</code>?</td><td>HIGH</td></tr>
+      <tr><td>Exit codes?</td><td>0 pass, 1 policy block, 2 config error, 3 operational</td></tr>
+      <tr><td>Total tests?</td><td>28, sab offline</td></tr>
+      <tr><td>Artifact schema version?</td><td>1.0</td></tr>
+      <tr><td>Report formats?</td><td>JSON, HTML, PDF (+ SHA-256 manifest)</td></tr>
+      <tr><td>Scan output directory?</td><td><code>./scan-results</code></td></tr>
+      <tr><td>Report directory?</td><td><code>./reports</code></td></tr>
+      <tr><td>Slack secret variable?</td><td><code>SLACK_WEBHOOK_URL</code></td></tr>
+      <tr><td>Jenkins credential ID?</td><td><code>slack-webhook-url</code> (Secret text)</td></tr>
+      <tr><td>Jenkins summary crons?</td><td><code>H 2 * * *</code> daily, <code>H 3 * * 1</code> weekly (UTC)</td></tr>
+      <tr><td>GitHub scheduled crons?</td><td>02:23 UTC daily, 03:41 UTC Monday</td></tr>
+      <tr><td>Slack retry attempts?</td><td>3 (backoff + jitter, capped)</td></tr>
+      <tr><td>Slack request timeout?</td><td>10 seconds</td></tr>
+      <tr><td>Severity order?</td><td>UNKNOWN &lt; LOW &lt; MEDIUM &lt; HIGH &lt; CRITICAL</td></tr>
+      <tr><td>Default package scope?</td><td><code>os</code></td></tr>
+      <tr><td>Trivy DB refresh cycle?</td><td>~24 hours (default)</td></tr>
+      <tr><td>Images in config?</td><td>4 — nginx, python:3.12-slim, alpine:3.19, node:18</td></tr>
+      <tr><td>Incremental cost?</td><td>₹0</td></tr>
+      <tr><td>Alert threshold variable?</td><td><code>NOTIFICATION_ALERT_ON</code> (default HIGH)</td></tr>
+      <tr><td>Sprint 3 ka risk counter?</td><td>Trivy ka <code>--exit-code</code> jaan-boojh kar use nahi kiya</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ J. FILES ============ -->
+<section id="files">
+  <h2>J. File map — kaunsi file kya karti hai</h2>
+  <p class="secnote">Agar examiner "ye code kahan hai" pooche, to exact path bata do.</p>
+  <table>
+    <thead><tr><th>Path</th><th>Responsibility</th><th>Sprint</th></tr></thead>
+    <tbody>
+      <tr><td><code>scanner/trivy_scanner.py</code></td><td>Trivy wrapper, config precedence, policy, exit codes, artifact writing</td><td>1–2–3</td></tr>
+      <tr><td><code>scanner/models.py</code></td><td>Typed Finding / ScanResult models (threshold-aware <code>blocking()</code>)</td><td>1–2</td></tr>
+      <tr><td><code>reporters/service.py</code></td><td>Strict loader, aggregation, JSON/HTML/PDF renderers, manifest</td><td>3</td></tr>
+      <tr><td><code>reporters/cli.py</code></td><td>Report CLI (period, formats, output dir, exits 0/2/3)</td><td>3</td></tr>
+      <tr><td><code>reporters/models.py</code></td><td>Immutable canonical <code>ReportDocument</code></td><td>3</td></tr>
+      <tr><td><code>reporters/templates/report.html.j2</code></td><td>Autoescaped HTML template</td><td>3</td></tr>
+      <tr><td><code>notifiers/slack.py</code></td><td>Webhook validation, payload builder, secure retrying transport</td><td>3</td></tr>
+      <tr><td><code>notifiers/cli.py</code></td><td>Notification CLI with threshold skip logic</td><td>3</td></tr>
+      <tr><td><code>config.yaml</code></td><td>Single source of policy truth (no secrets)</td><td>1–3</td></tr>
+      <tr><td><code>.env.example</code></td><td>Documented non-secret overrides</td><td>2–3</td></tr>
+      <tr><td><code>.github/workflows/container-scan.yml</code></td><td>Push/PR/manual gate + reports + Slack + artifacts</td><td>2–3</td></tr>
+      <tr><td><code>.github/workflows/scheduled-summaries.yml</code></td><td>Daily/weekly portfolio summaries</td><td>3</td></tr>
+      <tr><td><code>ci/Jenkinsfile</code></td><td>Main pipeline — gate, reports, optional Slack notify</td><td>2–3</td></tr>
+      <tr><td><code>ci/Jenkinsfile.summaries</code></td><td>Daily/weekly summary pipeline</td><td>3</td></tr>
+      <tr><td><code>docker/Dockerfile</code></td><td>Scanner image — pinned Trivy + Python wrapper</td><td>1–2</td></tr>
+      <tr><td><code>tests/</code></td><td>28 deterministic tests + synthetic Trivy fixtures</td><td>2–3</td></tr>
+      <tr><td><code>exceptions/allowlist.yaml</code></td><td>Exception template (reason + expiry design)</td><td>5 (planned)</td></tr>
+      <tr><td><code>docs/SPRINT3_REPORT_SCHEMA.md</code></td><td>Artifact + report contract documentation</td><td>3</td></tr>
+      <tr><td><code>dashboard/</code></td><td>Reserved for Prometheus + Grafana config</td><td>4 (planned)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ K. DEMO ============ -->
+<section id="demo">
+  <h2>K. Live demo script — 5 minute</h2>
+  <p class="secnote">Agar examiner "dikhao" bole, to isi order mein chalao. Har command ka output pehle se pata hona chahiye.</p>
+
+  <details class="qa" open><summary>Step 1 — Scanner aur policy dikhao (60 sec)<span class="tag t-s1">Demo</span></summary>
+  <div class="body">
+    <pre># clean image → pass
+python -m scanner.trivy_scanner hello-world:latest
+#   exit code 0, blocking_findings 0
+
+# vulnerable image → block
+python -m scanner.trivy_scanner alpine:3.19
+#   exit code 1, blocking_findings 2 (2 HIGH)
+
+# bolna: "Dekhiye same command, sirf image different — policy ne decide kiya."</pre>
+  </div></details>
+
+  <details class="qa"><summary>Step 2 — Config-driven behaviour dikhao (45 sec)<span class="tag t-s2">Demo</span></summary>
+  <div class="body">
+    <pre># threshold override bina code change
+python -m scanner.trivy_scanner alpine:3.19 --fail-on CRITICAL
+#   exit code 0 — kyunki CRITICAL 0 hai
+
+# bolna: "Policy code mein nahi, config/CLI mein hai — isliye reviewable aur flexible hai."</pre>
+  </div></details>
+
+  <details class="qa"><summary>Step 3 — Reports generate karo (60 sec)<span class="tag t-s3">Demo</span></summary>
+  <div class="body">
+    <pre>python -m reporters.cli scan-results/*-????????.json --period daily \
+  --formats json,html,pdf --output-dir reports
+
+# reports/ mein 4 files dikhao:
+#   vulnerability-daily-XXXX.json      → machine-readable
+#   vulnerability-daily-XXXX.html      → browser mein kholo
+#   vulnerability-daily-XXXX.pdf       → multi-page
+#   vulnerability-daily-XXXX.manifest.json → SHA-256 checksums
+
+# bolna: "Teen formats ek hi report_id se bante hain, isliye numbers kabhi mismatch nahi hote."</pre>
+  </div></details>
+
+  <details class="qa"><summary>Step 4 — Tests aur security behaviour dikhao (60 sec)<span class="tag t-test">Demo</span></summary>
+  <div class="body">
+    <pre>python -m pytest -q
+#   28 passed
+
+# webhook security (fail-closed)
+$env:SLACK_WEBHOOK_URL='https://example.com/services/x'
+python -m notifiers.cli reports/vulnerability-daily-*.json --always
+#   Notification error: not a valid Slack HTTPS webhook  (exit 3)
+
+# threshold skip
+$env:SLACK_WEBHOOK_URL='https://hooks.slack.com/services/T/B/x'
+python -m notifiers.cli reports/vulnerability-run-<clean>.json
+#   Notification skipped: report is below alert threshold  (exit 0)
+
+# bolna: "Security control kabhi silent fail nahi hota."</pre>
+  </div></details>
+
+  <details class="qa"><summary>Step 5 — CI evidence dikhao (90 sec)<span class="tag t-s2">Demo</span></summary>
+  <div class="body">
+    <ul>
+      <li><b>GitHub Actions:</b> run #13 — report generation step pass, 1 artifact bundle uploaded</li>
+      <li><b>Jenkins build #2:</b> green + reports archived</li>
+      <li><b>Jenkins build #3:</b> POLICY BLOCKED, phir bhi reports archived (evidence-before-failure)</li>
+      <li><b>Jenkins summaries:</b> daily build #1 aur weekly build #1 — 4 fresh image scans each</li>
+      <li><b>Screenshots:</b> <code>docs/screenshots/sprint3-*.png</code></li>
+    </ul>
+    <p><b>Closing line:</b> "Sprint 3 tak ka system end-to-end verified hai — local, GitHub Actions aur Jenkins par genuine evidence ke saath."</p>
+  </div></details>
+</section>
+
+<section>
+  <h2>Final tips</h2>
+  <div class="callout ok">
+    <ul>
+      <li><b>Numbers yaad rakho:</b> Trivy 0.74.0, wrapper 0.3.0, 28 tests, exit 0/1/2/3, fail_on HIGH, schema 1.0, 4 images, ₹0 cost</li>
+      <li><b>Har answer mein "kyun" bolo</b> — examiner design decision dekhna chahta hai, sirf feature list nahi</li>
+      <li><b>Limitations khud batao</b> — jo apni kami maan leta hai, us par examiner kam shak karta hai</li>
+      <li><b>Ek hi punchline yaad rakho:</b> "Trivy engine hai, humne policy, reporting, notification aur governance layer banayi — aur poora system fail-closed hai."</li>
+      <li><b>Evidence ki taraf point karo:</b> <code>docs/</code> mein teen sprint reports aur screenshots hain — screen par dikha sakte ho</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Container Image Vulnerability Scanner with Reporting · Viva Preparation (Sprint 1–5) · 17 October 2026<br>
+  Sprint 1–3 implemented and verified · Sprint 4–5 design ready
+</footer>
+
+<script>
+(function(){
+  const qas = Array.from(document.querySelectorAll('.qa'));
+  const sections = Array.from(document.querySelectorAll('main section'));
+  const search = document.getElementById('search');
+  const countEl = document.getElementById('count');
+  const toggle = document.getElementById('toggle');
+  const filters = Array.from(document.querySelectorAll('.controls button[data-f]'));
+  let activeFilter = 'all';
+  let expanded = false;
+
+  const SECMAP = {snapshot:'arch',arch:'arch',s1:'s1',s2:'s2',s3:'s3',s4:'s4',s5:'s5',cross:'cross',traps:'trap',rapid:'cross',files:'arch',demo:'arch'};
+
+  function sectionKey(qa){
+    const sec = qa.closest('section');
+    return sec ? (SECMAP[sec.id] || 'cross') : 'cross';
+  }
+
+  function apply(){
+    const term = (search.value || '').trim().toLowerCase();
+    let visible = 0;
+    qas.forEach(qa => {
+      const text = qa.textContent.toLowerCase();
+      const tagText = (qa.querySelector('.tag')?.textContent || '').toLowerCase();
+      const key = sectionKey(qa);
+      const matchTerm = !term || text.includes(term);
+      const matchFilter = activeFilter === 'all' || key === activeFilter || tagText.includes(activeFilter);
+      const show = matchTerm && matchFilter;
+      qa.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    // hide empty sections
+    sections.forEach(sec => {
+      const any = Array.from(sec.querySelectorAll('.qa')).some(q => q.style.display !== 'none');
+      const hasTable = sec.querySelector('table');
+      sec.style.display = (any || (hasTable && activeFilter === 'all' && !term)) ? '' : 'none';
+    });
+    countEl.textContent = visible + ' questions';
+  }
+
+  search.addEventListener('input', apply);
+  filters.forEach(btn => btn.addEventListener('click', () => {
+    filters.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.f;
+    apply();
+  }));
+
+  toggle.addEventListener('click', () => {
+    expanded = !expanded;
+    qas.forEach(q => { if (q.style.display !== 'none') q.open = expanded; });
+    toggle.textContent = expanded ? 'Collapse all' : 'Expand all';
+  });
+
+  // open first Q of each sprint section by default for quick reading
+  ['s1','s2','s3','s4','s5','traps'].forEach(id => {
+    const sec = document.getElementById(id);
+    const first = sec && sec.querySelector('.qa');
+    if (first) first.open = true;
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>
