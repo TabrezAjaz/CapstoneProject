@@ -2,7 +2,7 @@ name: Container vulnerability gate
 
 on:
   push:
-    branches: [main, sprint-2, sprint-3]
+    branches: [main, sprint-2, sprint-3, sprint-4, sprint-5]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -96,6 +96,7 @@ jobs:
             exit 0
           fi
           python -m reporters.cli "${artifacts[@]}" --formats json,html,pdf --output-dir reports
+          python -m dashboard.cli "${artifacts[@]}" --metrics-file reports/scan-metrics.prom
 
       - name: Send severity-aware Slack alert
         if: always() && github.event_name != 'pull_request' && env.SLACK_WEBHOOK_URL != ''

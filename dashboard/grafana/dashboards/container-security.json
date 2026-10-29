@@ -1,0 +1,24 @@
+{
+  "uid": "container-security",
+  "title": "Container Security | Vulnerability Posture",
+  "tags": ["security", "trivy", "capstone"],
+  "schemaVersion": 40,
+  "version": 1,
+  "refresh": "15s",
+  "timezone": "utc",
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {"list": [
+    {"name": "image", "label": "Image", "type": "query", "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "query": "label_values(vulnerability_findings, image)", "refresh": 1, "multi": true, "includeAll": true, "allValue": ".*", "current": {"text": "All", "value": "$__all"}},
+    {"name": "severity", "label": "Severity", "type": "query", "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "query": "label_values(vulnerability_findings, severity)", "refresh": 1, "multi": true, "includeAll": true, "allValue": ".*", "current": {"text": "All", "value": "$__all"}}
+  ]},
+  "panels": [
+    {"id": 1, "title": "Active findings", "type": "stat", "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "sum(vulnerability_findings{image=~\"$image\",severity=~\"$severity\"})", "instant": true}], "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "green"}}, "overrides": []}},
+    {"id": 2, "title": "Policy blocking (all severities)", "type": "stat", "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "sum(vulnerability_blocking_findings{image=~\"$image\"})", "instant": true}], "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "red"}}, "overrides": []}},
+    {"id": 3, "title": "Resolved since previous scan", "type": "stat", "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "sum(vulnerability_resolved_findings{image=~\"$image\"})", "instant": true}], "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "blue"}}, "overrides": []}},
+    {"id": 4, "title": "Approved exception findings", "type": "stat", "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "sum(vulnerability_suppressed_findings{image=~\"$image\"})", "instant": true}], "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "orange"}}, "overrides": []}},
+    {"id": 5, "title": "Findings by image and severity", "type": "timeseries", "gridPos": {"x": 0, "y": 4, "w": 16, "h": 9}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "vulnerability_findings{image=~\"$image\",severity=~\"$severity\"}", "legendFormat": "{{image}} / {{severity}}"}], "fieldConfig": {"defaults": {"unit": "short", "min": 0, "custom": {"lineWidth": 2, "fillOpacity": 8}}, "overrides": []}},
+    {"id": 6, "title": "Severity breakdown", "type": "piechart", "gridPos": {"x": 16, "y": 4, "w": 8, "h": 9}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "sum by (severity) (vulnerability_findings{image=~\"$image\",severity=~\"$severity\"})", "legendFormat": "{{severity}}", "instant": true}], "options": {"pieType": "donut", "legend": {"displayMode": "table", "placement": "bottom", "values": ["value"]}}},
+    {"id": 7, "title": "Policy blocked: 1 = blocked, 0 = passed", "type": "table", "gridPos": {"x": 0, "y": 13, "w": 12, "h": 7}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "vulnerability_policy_blocked{image=~\"$image\"}", "format": "table", "instant": true}]},
+    {"id": 8, "title": "Scan age by image", "type": "bargauge", "gridPos": {"x": 12, "y": 13, "w": 12, "h": 7}, "datasource": {"type": "prometheus", "uid": "scan-prometheus"}, "targets": [{"refId": "A", "expr": "time() - vulnerability_scan_timestamp_seconds{image=~\"$image\"}", "legendFormat": "{{image}}", "instant": true}], "fieldConfig": {"defaults": {"unit": "dtdurations", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 86400}, {"color": "red", "value": 172800}]}}, "overrides": []}}
+  ]
+}

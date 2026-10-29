@@ -1,6 +1,16 @@
 # CapstoneProject
 Project Title: Container Image Vulnerability Scanner with Reporting
 
+## Current Delivery Status
+
+Sprint 1-3 scanning, CI gates, reports, and Jenkins Slack delivery are implemented. Sprint 4 adds
+persistent scan history, a responsive Flask/Chart.js dashboard, Prometheus metrics, and a
+provisioned Grafana dashboard. The architecture discussion below preserves the original Sprint 1
+design context; see the sprint sections and reports for the implemented state.
+
+- [Sprint 3 reporting and notification evidence](docs/Sprint3_Reporting_and_Notifications_Report.html)
+- [Sprint 4 dashboard and monitoring evidence](docs/Sprint4_Dashboard_and_Monitoring_Report.html)
+
 ## Architecture Overview
 
 The diagram below shows the complete system we designed for this project. We planned the
@@ -176,9 +186,12 @@ at 02:23 UTC daily and 03:41 UTC on Mondays, and can be dispatched manually with
 branch, so merge the workflow to `main` to activate the timers.
 
 For Jenkins, create two Pipeline jobs that both point to **Script Path** `ci/Jenkinsfile.summaries`
-and pass `SUMMARY_PERIOD` as `daily` and `weekly`, with UTC cron triggers `H 2 * * *` and
-`H 3 * * 1`. Each run rescans all configured images, so summaries always reflect current
-vulnerabilities; no history database or dashboard is involved (that is Sprint 4).
+with UTC cron triggers `H 2 * * *` and `H 3 * * 1`. `NOTIFY` defaults to true.
+`SUMMARY_PERIOD=auto` chooses weekly for a job name ending in `-Weekly`, otherwise daily;
+explicit `daily` and `weekly` overrides remain available. Daily #17 and weekly #5 verified the
+saved defaults, correct cadence, successful Slack delivery, and archived evidence.
+Sprint 3 reached `main` on 29 October 2026. GitHub Slack needs its own `SLACK_WEBHOOK_URL` secret;
+the Jenkins credential does not configure GitHub.
 
 ### Failure precedence
 
@@ -192,4 +205,86 @@ treat a policy block as a valid summary result and fail only on operational erro
 Reports and notifications add no paid services: Jinja2 and ReportLab run locally, Slack's incoming
 webhooks are free on the current plan, and Trivy, GitHub-hosted runners, and the academic Jenkins
 controller are already in use.
+
+## Sprint 4 - Dashboard and Monitoring
+
+### Persistent history and local dashboard
+
+Run all commands from the repository root. Import normalized scanner artifacts, not report JSON
+or raw Trivy output. Repeated imports of the same scan ID are idempotent; conflicting reuse of a
+scan ID fails the whole import transaction. New observations of an image remain separate scans.
+
+```powershell
+pip install -r requirements-dev.txt
+$artifacts = @(Get-ChildItem scan-results -Filter '*-????????.json' | ForEach-Object FullName)
+python -m dashboard.cli @artifacts --metrics-file reports/scan-metrics.prom
+python -m dashboard.app --port 5050
+```
+
+Open http://127.0.0.1:5050. The UI provides image/severity/date filters, historical observations,
+per-image policy state, scan drilldowns, approved-exception details, and JSON downloads.
+The API is read-only: `/api/overview`, `/api/scans/<scan_id>`, `/healthz`, and `/metrics`.
+SQLite history defaults to `dashboard/data/history.sqlite3`, which is excluded from Git and Docker
+build contexts. Use `--database` on both importer and server to select another database.
+
+For an existing CI build, download its normalized scan artifacts and import them locally.
+CI archives `reports/scan-metrics.prom`; its temporary database is not a central history store.
+The local history importer is intentionally a CLI, not an unauthenticated remote write endpoint.
+
+### Prometheus and Grafana
+
+```powershell
+# Set a private, non-default password directly in your terminal; never commit it.
+$env:GRAFANA_ADMIN_PASSWORD = '<your-private-password>'
+docker compose -f dashboard/compose.yaml up -d --build
+```
+
+- Containerized dashboard: http://127.0.0.1:5051
+- Prometheus target health: http://127.0.0.1:9095/targets
+- Grafana: http://127.0.0.1:3030/d/container-security
+
+Prometheus scrapes the persistent exporter every 15 seconds and retains 15 days of scrape history.
+Grafana provisions its Prometheus datasource and eight panels automatically, with image/severity
+variables and a UTC time picker. It permits anonymous **Viewer** access only; published ports
+bind to loopback. Administrative login uses your environment password. Both monitoring services
+use named volumes; do not use `down -v` unless you intend to delete their history.
+This is a local demonstration deployment, not an authenticated public production service.
+
+### Metric Semantics
+
+| Metric | Meaning |
+|---|---|
+| `vulnerability_findings{image,severity}` | Active latest-scan finding counts |
+| `vulnerability_blocking_findings{image}` | Active findings at/above the policy threshold |
+| `vulnerability_policy_blocked{image}` | 1 blocked, 0 passed |
+| `vulnerability_new_findings{image}` | New advisory/package pairs compared with the previous scan |
+| `vulnerability_resolved_findings{image}` | Previous advisory/package pairs now absent |
+| `vulnerability_suppressed_findings{image}` | Approved exceptions, separately visible |
+| `vulnerability_scan_timestamp_seconds{image}` | Latest actual scan time, for staleness alerts |
+| `vulnerability_scans_stored` | Persisted artifact count, a gauge rather than a process counter |
+
+New/resolved values are gauges for the latest scan transition, not cumulative event counters.
+The first observation is a baseline: all observed pairs are new and none are resolved.
+Suppressing a vulnerability is not remediation: comparisons include active plus suppressed pairs.
+An absent vulnerability is an observation within the configured Trivy scope, not proof that a
+patch was installed. Date filters choose observations in that range and use the prior stored
+observation as a comparison baseline. Pending is the latest active finding count per image.
+Policy-blocking totals always use the full configured gate, even under a severity display filter.
+
+SQLite preserves original scan timestamps. Prometheus starts history when it begins scraping;
+it does not backfill old SQLite scans. No historical data or remediation is fabricated.
+
+### Verification
+
+```powershell
+python -m pytest -q
+# Install Chromium once, or pass --executable with an installed Chrome path.
+python -m playwright install chromium
+python -m dashboard.browser_check
+```
+
+The browser check validates API/UI totals, filters, empty/error states, scan details, readable
+controls, no page overflow, and nonblank chart pixels at 1440x1080 and 390x844. It saves genuine
+screenshots and a JSON verification record under `docs/screenshots`.
+An optional `--audit-scan-id` captures an existing approved-exception audit view.
 

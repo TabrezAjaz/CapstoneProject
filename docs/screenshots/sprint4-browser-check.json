@@ -1,0 +1,24 @@
+{
+  "captured_at": "2026-10-29T18:34:29.222434+00:00",
+  "checks": [
+    "API/UI totals agree",
+    "Severity filter",
+    "Image filter",
+    "Date filter, empty state, invalid-range error",
+    "Scan drilldown and close",
+    "1440x1080: no horizontal overflow; nonblank charts",
+    "390x844: no horizontal overflow; nonblank charts",
+    "Approved exception audit deep link",
+    "No browser JavaScript errors"
+  ],
+  "history_scans": 8,
+  "totals": {
+    "blocked_images": 1,
+    "blocking": 2,
+    "found": 0,
+    "images": 2,
+    "pending": 10,
+    "resolved": 0,
+    "suppressed": 0
+  }
+}
