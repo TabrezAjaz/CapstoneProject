@@ -1,78 +1,131 @@
-# CapstoneProject
-Project Title: Container Image Vulnerability Scanner with Reporting
+# Container Image Vulnerability Scanner with Reporting
 
-## Current Delivery Status
+A Trivy-backed Python scanner with CI policy gates, JSON/HTML/PDF evidence, Slack notifications,
+expiring vulnerability exceptions, persistent scan history, and local monitoring dashboards.
+The delivered Sprint 1-5 implementation is merged into `main`; sprint branches retain milestone
+snapshots. Trivy is pinned to **0.74.0**, the wrapper is **0.5.0**, and the integrated suite has
+**77 deterministic tests**. Real browser checks cover desktop and mobile layouts.
 
-Sprint 1-3 scanning, CI gates, reports, and Jenkins Slack delivery are implemented. Sprint 4 adds
-persistent scan history, a responsive Flask/Chart.js dashboard, Prometheus metrics, and a
-provisioned Grafana dashboard. Sprint 5 adds expiring, scoped CVE exceptions with audit evidence,
-fresh rescan lineage, and fail-closed retry/error handling. The architecture discussion below preserves the original Sprint 1
-design context; see the sprint sections and reports for the implemented state.
+## Delivery Status
 
-- [Sprint 3 reporting and notification evidence](docs/Sprint3_Reporting_and_Notifications_Report.html)
-- [Sprint 4 dashboard and monitoring evidence](docs/Sprint4_Dashboard_and_Monitoring_Report.html)
-- [Sprint 5 exceptions, rescan, and reliability evidence](docs/Sprint5_Exceptions_and_Reliability_Report.html)
+| Sprint | Delivered capability | Verification |
+|---|---|---|
+| 1 | Python wrapper, Trivy scan, normalized findings and configuration | Real registry-image scans |
+| 2 | Shared severity gate, GitHub Actions and Jenkins pipelines, exit codes 0/1/2/3 | Passing and intentionally blocked builds |
+| 3 | JSON/HTML/PDF reports, SHA-256 manifests, Slack, daily/weekly summaries | Real Jenkins HIGH/CRITICAL alerts and daily/weekly deliveries |
+| 4 | SQLite history, Flask/Chart.js UI, Prometheus exporter and Grafana | Browser checks, healthy scrape target, 35 tests on the isolated milestone |
+| 5 | Scoped expiring exceptions, suppression audit, fresh rescans and bounded retries | Real approval/expiry demonstrations; 77 integrated tests |
 
-## Architecture Overview
+**Remaining external setup:** GitHub needs its own `SLACK_WEBHOOK_URL` secret; the Jenkins credential
+does not populate it. Without that secret, GitHub Slack steps are skipped, not delivered.
+Rotation of the previously exposed webhook and channel-side screenshots remain account-owner
+actions. The dashboards are a loopback-only local demonstration, not a public production service.
+No Teams/email notifier, automatic registry-digest watcher, or automatic CI-to-laptop importer is
+implemented.
 
-The diagram below shows the complete system we designed for this project. We planned the
-full architecture up front and are building it incrementally across six sprints. In the diagram,
-the components highlighted in teal are the ones we have already built and verified in **Sprint 1**
-(the scanning engine), while the dashed boxes are the parts our team will add in the later sprints
-(tagged `S2`–`S5`).
+## Quick Start
 
-![Container Image Vulnerability Scanner — System Architecture](docs/architecture-diagram.png)
+Use Python 3.12+ and install [Trivy 0.74.0](https://trivy.dev/latest/getting-started/installation/)
+on your PATH. Docker Desktop/Engine is needed for the monitoring stack, not for registry-reference
+CLI scans. Run the following in PowerShell from the repository root:
 
-We laid the system out as a left-to-right pipeline so it is easy to follow how an image travels
-from input, through scanning, to the final outputs. It is organised into three parts.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+trivy --version
+python -m pytest tests -q
 
-### 1. Input Sources (left)
+# Clean-image smoke test; Alpine with --fail-on HIGH may intentionally return exit 1.
+python -m scanner.trivy_scanner hello-world:latest
+$scans = @(Get-ChildItem scan-results -Filter 'hello-world_latest-*.json' | ForEach-Object FullName)
+python -m reporters.cli @scans --formats json,html,pdf --output-dir reports
+python -m dashboard.cli @scans --metrics-file reports/scan-metrics.prom
+python -m dashboard.app --port 5050
+```
 
-This is where a container image comes from before we scan it:
+Open http://127.0.0.1:5050. Reports are written under `reports/`; runtime scan results, history
+databases and test output are excluded from Git. For Prometheus/Grafana, follow the
+[monitoring runbook](#prometheus-and-grafana) below. Linux/macOS users can activate
+`.venv/bin/activate` and pass explicit normalized artifact paths to the same Python modules.
 
-- **Docker Images** — images we build locally or pull with `docker pull`.
-- **Container Registry** — images stored in Docker Hub, Amazon ECR, or GHCR.
-- **CI/CD Trigger** *(Sprint 2)* — later, a pipeline (GitHub Actions / Jenkins) will hand an image
-  to the scanner automatically on every code push.
+## Deployment Architecture
 
-### 2. Scanner Core (center) — what we built in Sprint 1
+This is the **implemented Sprint 1-5 deployment architecture**, not a sprint roadmap or execution
+flowchart. Boundaries identify where workloads run; stores identify persisted data; labelled arrows
+identify file transfers, local database access and network interfaces. GitHub Actions and Jenkins
+are alternative CI execution hosts, not sequential services.
 
-This is the heart of the project and the work we completed in Sprint 1. The flow inside it is:
+![Implemented deployment architecture: CI execution, artifact storage, manual import and local Docker monitoring](docs/deployment-architecture.svg)
 
-1. **`config.yaml`** — our central configuration. We keep all settings here (which severities to
-   report, the `fail_on` threshold, output paths) so nothing is hard-coded.
-2. **Python Wrapper** (`scanner/trivy_scanner.py`) — the wrapper we wrote that reads the config,
-   runs the scan, and parses the results into a clean format.
-3. **Trivy Engine** — the scanner that actually inspects the image and classifies findings by
-   severity.
-4. **Vulnerability Database (local cache)** — Trivy's local copy of known vulnerabilities
-   (**CVE/NVD**, GitHub advisories, and distro security data). It refreshes from the online
-   **CVE feeds** roughly every 24 hours, which is what keeps our checks up to date.
-5. **Scan Results** — the structured output we produce (JSON + table) with per-severity counts and
-   the list of findings.
+[Open full-size diagram](docs/deployment-architecture.svg) |
+[PNG for reports and slides](docs/deployment-architecture.png) |
+[Editable Mermaid source](docs/deployment-architecture.mmd)
 
-### 3. Outputs & Consumers (right) — planned for later sprints
+To regenerate the diagram, use Mermaid CLI 11.12.0 with the checked-in rendering configuration
+and an installed Chrome executable. This is an optional documentation tool, not a runtime dependency:
 
-These are the parts we will connect the scan results to in the upcoming sprints:
+```powershell
+$env:PUPPETEER_EXECUTABLE_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+npx --yes --package=@mermaid-js/mermaid-cli@11.12.0 mmdc `
+  -i docs/deployment-architecture.mmd -c docs/deployment-architecture.config.json `
+  -o docs/deployment-architecture.svg -b white -w 2200
+# Repeat with -o docs/deployment-architecture.png -s 2 for the slide export.
+```
 
-- **CI/CD Build Gate** *(Sprint 2)* — pass or fail a build when HIGH/CRITICAL issues are found.
-- **Reporters** *(Sprint 3)* — generate HTML, PDF, and JSON reports.
-- **Notifiers** *(Sprint 3)* — send alerts to Slack, Microsoft Teams, or email.
-- **Prometheus + Grafana** *(Sprint 4)* — collect metrics and show historical trends on a dashboard.
-- **Exceptions / Allowlist** *(Sprint 5)* — let us approve known CVEs so they are filtered out of
-  the reports.
+### Runtime and Storage Boundaries
 
-### Why we designed it this way
+| Boundary | Runs or stores | Interfaces and persistence |
+|---|---|---|
+| External services | GitHub source repository, OCI image registry, Trivy DB distribution, Slack | Source checkout, image/DB downloads and HTTPS incoming webhooks |
+| CI execution host | Python scanner/report/notifier/metrics CLIs and Trivy subprocess; local DB cache | Configuration and exceptions checked out with source; webhook injected from the provider's secret store |
+| CI artifact store | Normalized scans, reports, SHA-256 manifests, metrics snapshot and test evidence | GitHub Actions artifact storage or Jenkins build archives; a blocked gate does not discard evidence |
+| Local host | Manual artifact import CLI and `dashboard/data/history.sqlite3` | Idempotent transactional imports; host SQLite file bind-mounted into the dashboard container |
+| Docker Compose network | Flask exporter/UI, Prometheus and Grafana | Internal HTTP connections; Prometheus TSDB and Grafana state in named volumes |
+| Operator browser | Custom scan explorer and Grafana dashboards | Loopback host ports only; no public ingress configured |
 
-- **Separation of concerns** — we kept the Python wrapper as a thin layer over Trivy, so the core
-  does one job well and we can add reporting, notifications, and CI/CD later without rewriting it.
-- **Config-driven** — because thresholds and paths live in `config.yaml`, we can change the
-  scanner's behaviour without touching the code. The `fail_on` value is what we will use to break a
-  CI build in Sprint 2.
-- **Runs locally and for free** — everything runs on Docker Desktop and Python, so our running cost
-  stays at zero (the only network use is the one-time database and image downloads).
-- **Standards-based** — every finding maps back to an official **CVE/NVD** identifier with a CVSS
-  score, so our severities follow the industry standard rather than anything we invented.
+### Key Architectural Decisions
+
+- **Scan-time policy:** Trivy findings are normalized, then scoped unexpired exceptions are applied
+  before active severity counts and the gate. Accepted risk remains visible in suppression audit
+  fields; it is not counted as remediation.
+- **Evidence before final outcome:** CI preserves the scanner result while reporting/notification
+  steps run. Evidence is archived even for intentional policy blocks; notification success cannot
+  turn a blocked scan into a pass.
+- **No direct CI-to-local connection:** download archived normalized scans and import them locally.
+  The CI-generated `.prom` file is evidence, not an always-on exporter or a remote history update.
+- **Separate histories:** SQLite preserves original scan observations; Prometheus records samples
+  only after scraping starts. Grafana queries Prometheus, while the custom UI reads the Flask API.
+- **Read-only web surface:** importing is a local CLI operation, not an unauthenticated write API.
+  No Node Exporter or Pushgateway is part of this deployment.
+
+### Historical Sprint 1 Component and Workflow Overview
+
+The earlier image is retained as a **Sprint 1 Component and Workflow Overview**, not as the final
+deployment architecture. Its dashed boxes describe future work as understood at Sprint 1; its
+original embedded title and planned Teams/email labels are historical, not current delivery claims.
+
+<details>
+<summary>View the original Sprint 1 overview</summary>
+
+![Historical Sprint 1 component and workflow overview, not the current deployment architecture](docs/architecture-diagram.png)
+
+</details>
+
+## Reports and Evidence
+
+- [Sprint 1 setup and basic scanning](docs/Sprint1_Setup_and_Basic_Scanning_Report.html)
+- [Sprint 2 CI/CD integration](docs/Sprint2_CI_CD_Integration_Report.html)
+- [Sprint 3 reporting and notifications](docs/Sprint3_Reporting_and_Notifications_Report.html)
+- [Sprint 4 dashboard and monitoring](docs/Sprint4_Dashboard_and_Monitoring_Report.html)
+- [Sprint 5 exceptions and reliability](docs/Sprint5_Exceptions_and_Reliability_Report.html)
+- [Original Sprint 5 artifacts, generated reports and JUnit results](docs/evidence/sprint5/)
+- [Viva preparation: 93 searchable questions and answers](docs/Viva_Preparation_Sprint1_to_5.html)
+
+HTML reports can be opened locally after cloning; GitHub's file viewer shows their source, not a
+hosted application. Archived live counts are date/database-specific. Identity correction changed
+historical commit hashes without changing file trees; existing CI-run links still describe the
+original executions.
 
 ## Sprint 2 — CI/CD vulnerability gate
 
@@ -184,8 +237,10 @@ python -m notifiers.cli reports/vulnerability-daily-*.json --always
 
 `.github/workflows/scheduled-summaries.yml` performs a fresh scan of every image in `config.yaml`
 at 02:23 UTC daily and 03:41 UTC on Mondays, and can be dispatched manually with `daily` or
-`weekly`. GitHub only evaluates `schedule` and `workflow_dispatch` from the repository's default
-branch, so merge the workflow to `main` to activate the timers.
+`weekly`. Scheduled runs use the repository's default branch. Manual dispatch requires the workflow
+to exist on that branch, and can select another branch. These workflows are merged into `main`;
+manual workflow runs are verification,
+not evidence that a cron event fired at its scheduled time.
 
 For Jenkins, create two Pipeline jobs that both point to **Script Path** `ci/Jenkinsfile.summaries`
 with UTC cron triggers `H 2 * * *` and `H 3 * * 1`. `NOTIFY` defaults to true.
@@ -197,16 +252,20 @@ the Jenkins credential does not configure GitHub.
 
 ### Failure precedence
 
-Scanning, reporting, and notification all run so evidence is never lost. The scanner exit code
-still decides the gate: a blocked image keeps the build red even when reporting and Slack delivery
-succeed. Report and exhausted-delivery failures are operational failures. Scheduled summary jobs
-treat a policy block as a valid summary result and fail only on operational errors.
+When normalized scan artifacts exist, reporting runs before final gate enforcement; Slack runs
+when its secret and notification conditions are satisfied. Artifact upload/archiving is attempted
+even when earlier stages fail. The scanner exit code still decides the gate: a blocked image keeps
+the build red even when reporting and Slack delivery succeed. Report and exhausted-delivery
+failures are operational failures. Scheduled summary jobs treat a policy block as a valid summary
+result and fail only on operational errors. A scanner failure without valid artifacts cannot
+produce a vulnerability report.
 
-### Cost
+### Operating Scope
 
-Reports and notifications add no paid services: Jinja2 and ReportLab run locally, Slack's incoming
-webhooks are free on the current plan, and Trivy, GitHub-hosted runners, and the academic Jenkins
-controller are already in use.
+No paid cloud infrastructure is provisioned by this repository. Local compute/storage, registry
+downloads, GitHub Actions allowances, Slack workspace capabilities and the academic Jenkins
+controller remain subject to their own availability and plan limits. Image and database downloads
+can recur; they are not one-time network costs.
 
 ## Sprint 4 - Dashboard and Monitoring
 

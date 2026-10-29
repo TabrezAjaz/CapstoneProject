@@ -1,0 +1,22 @@
+{
+  "theme": "base",
+  "htmlLabels": false,
+  "fontFamily": "Trebuchet MS, sans-serif",
+  "themeVariables": {
+    "fontFamily": "Trebuchet MS, sans-serif",
+    "fontSize": "16px",
+    "primaryColor": "#edf3fc",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#52708e",
+    "lineColor": "#526273",
+    "clusterBkg": "#f8fafc",
+    "clusterBorder": "#9aaabd",
+    "edgeLabelBackground": "#ffffff"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 35,
+    "rankSpacing": 55
+  }
+}

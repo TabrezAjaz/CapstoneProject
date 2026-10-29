@@ -1,0 +1,49 @@
+flowchart TB
+    source["GitHub repository<br/>Source + policy"]
+    registry["OCI image registry"]
+    dbdist["Trivy DB distribution"]
+    secrets["CI secret store"]
+    slack["Slack workspace<br/>Incoming webhook"]
+
+    subgraph ci["CI HOST: GitHub runner OR Jenkins agent"]
+        workloads["Python CLIs + Trivy<br/>Scan, gate, reports,<br/>notify and export"]
+        cache[("Agent filesystem<br/>Trivy DB cache")]
+        workloads -->|"DB reads"| cache
+    end
+
+    artifacts[("CI artifact store<br/>Scans + reports<br/>Checksums + metrics + tests")]
+
+    subgraph host["LOCAL DEMONSTRATION HOST"]
+        importer["Local import CLI<br/>dashboard.cli"]
+        history[("SQLite bind mount<br/>Original scan history")]
+
+        subgraph docker["DOCKER COMPOSE"]
+            app["Flask / Chart.js :5050<br/>Read-only API + /metrics"]
+            prom[("Prometheus :9090<br/>TSDB volume; 15 days")]
+            grafana["Grafana :3000<br/>Viewer; state volume"]
+            prom -->|"HTTP /metrics; 15s"| app
+            grafana -->|"HTTP query API"| prom
+        end
+
+        importer -->|"Idempotent import"| history
+        app -->|"SQLite reads"| history
+    end
+
+    browser["Operator browser<br/>Loopback access"]
+
+    source -->|"Checkout"| workloads
+    registry -->|"HTTPS image pull"| workloads
+    dbdist -->|"HTTPS DB refresh"| cache
+    secrets -->|"Environment binding"| workloads
+    workloads -->|"HTTPS webhook"| slack
+    workloads -->|"Archive before gate exit"| artifacts
+    artifacts -.->|"MANUAL download + import"| importer
+    browser -->|"HTTP localhost:5051"| app
+    browser -->|"HTTP localhost:3030"| grafana
+
+    classDef external fill:#ffffff,stroke:#64748b,color:#203247
+    classDef workload fill:#e7f2ef,stroke:#267660,color:#163e32
+    classDef store fill:#fff4d9,stroke:#ac7a16,color:#4d3b13
+    class source,registry,dbdist,secrets,slack,browser external
+    class workloads,importer,app,grafana workload
+    class cache,artifacts,history,prom store
