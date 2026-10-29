@@ -144,7 +144,7 @@ ul{margin:10px 0 10px 0}
 <tr><td>GitHub Actions</td><td>02:23 UTC daily, 03:41 UTC Monday</td><td><code>.github/workflows/scheduled-summaries.yml</code> plus manual <code>daily</code>/<code>weekly</code> dispatch</td></tr>
 <tr><td>Jenkins</td><td><code>H 2 * * *</code> and <code>H 3 * * 1</code> (UTC)</td><td>Two Pipeline jobs sharing <code>ci/Jenkinsfile.summaries</code> with a <code>SUMMARY_PERIOD</code> parameter</td></tr>
 </tbody></table>
-<div class="callout warn"><strong>Platform note:</strong> GitHub evaluates <code>schedule</code> and manual dispatch only from the repository default branch, so the scheduled workflow activates once Sprint 3 is merged to <code>main</code>. Jenkins timers are configured on the jobs themselves.</div>
+<div class="callout"><strong>Platform verification, 29 October 2026:</strong> Sprint 3 was merged into the default branch <code>main</code> at <code>c559d55</code>, enabling GitHub to evaluate the scheduled workflow. Jenkins UTC timers remain configured on the jobs. GitHub Slack delivery additionally requires the repository secret; it is not inferred from Jenkins delivery.</div>
 
 <h2>9. Automated Testing</h2>
 <table>
@@ -253,7 +253,20 @@ Finished: SUCCESS</pre>
 <tr><td>Weekly #4</td><td><code>vulnerability-weekly-26dc6136</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.json">JSON</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.html">HTML</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.pdf">PDF</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.manifest.json">SHA-256 manifest</a></td></tr>
 </tbody></table>
 <div class="callout warn"><strong>Evidence boundary:</strong> the material above is captured Jenkins console text and verified artifact inventory, not screenshots of messages inside Slack. Browser screenshot export failed during this session; no blank or reconstructed screenshot is included. Channel-side message screenshots still need to be captured from the Capstone workspace with webhook URLs and other secrets excluded.</div>
-<p>These are notifier delivery confirmations from Jenkins, not Slack channel screenshots. Scheduled parameter defaults and channel-side visual evidence are tracked separately. The shared summary pipeline currently defaults <code>NOTIFY</code> to false and <code>SUMMARY_PERIOD</code> to daily; manual verification does not enable scheduled Slack alerts or fix the weekly default.</p>
+<h3>12.7 Default-parameter automation closure</h3>
+<p>Commit <code>2bc95ab</code> enables <code>NOTIFY=true</code> and defaults <code>SUMMARY_PERIOD</code> to <code>auto</code>. Auto resolves to weekly for a job ending in <code>-Weekly</code>, otherwise daily. Explicit cadence overrides remain supported. The corrected pipeline passed the live Jenkins declarative validator, and both saved jobs were verified with these defaults and their existing UTC cron expressions.</p>
+<p>The following verification builds were triggered without parameter overrides, exercising exactly the defaults used by a timer. They prove default-parameter behaviour; these two builds were manually triggered and are not represented as timer-fired executions.</p>
+<table><thead><tr><th>Job</th><th>Parameters</th><th>Resolved cadence and delivery</th><th>Result</th></tr></thead><tbody>
+<tr><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/17/console">Daily #17</a></td><td><code>auto</code>, <code>NOTIFY=true</code>, <code>HIGH</code></td><td><code>vulnerability-daily-9c7fcce9</code>; delivered in one attempt; eight archived files</td><td>SUCCESS</td></tr>
+<tr><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/5/console">Weekly #5</a></td><td><code>auto</code>, <code>NOTIFY=true</code>, <code>HIGH</code></td><td><code>vulnerability-weekly-e7be4999</code>; delivered in one attempt; eight archived files</td><td>SUCCESS</td></tr>
+</tbody></table>
+<pre>[2026-10-29T18:28:27.682Z] + PERIOD_TITLE=Daily
+[2026-10-29T18:28:40.484Z] Slack notification delivered in 1 attempt(s)
+Finished: SUCCESS
+
+[2026-10-29T18:27:40.280Z] + PERIOD_TITLE=Weekly
+[2026-10-29T18:27:53.087Z] Slack notification delivered in 1 attempt(s)
+Finished: SUCCESS</pre>
 
 <h2>13. Verification Status</h2>
 <table>
@@ -268,8 +281,9 @@ Finished: SUCCESS</pre>
 <tr><td>Daily / weekly summaries (Jenkins)</td><td>Daily and weekly build #1 with four fresh image scans each</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Slack real delivery</td><td>Main builds #4 (HIGH) and #5 (CRITICAL): delivered in one attempt each</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Daily / weekly Slack summaries</td><td>Daily #16 and weekly #4: SUCCESS, eight archived files each, delivered in one attempt each</td><td><span class="badge done">PASS</span></td></tr>
-<tr><td>Scheduled Slack delivery</td><td>Notification-enabled daily/weekly runs and scheduled parameter defaults require separate verification</td><td><span class="badge pending">PENDING</span></td></tr>
-<tr><td>GitHub scheduled cadence</td><td>Manual dispatch after the workflow reaches the default branch</td><td><span class="badge pending">PENDING</span></td></tr>
+<tr><td>Jenkins schedule configuration and default delivery</td><td>UTC timers retained; daily #17 and weekly #5 use auto/NOTIFY=true without overrides, resolve correct cadence, deliver, and succeed</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>GitHub default-branch deployment</td><td>Sprint 3 merged into main at c559d55; both schedule expressions deployed</td><td><span class="badge done">CONFIGURED</span></td></tr>
+<tr><td>GitHub Slack delivery</td><td>Repository SLACK_WEBHOOK_URL secret still requires direct user entry; Jenkins secret is separate</td><td><span class="badge pending">PENDING</span></td></tr>
 </tbody></table>
 
 <h2>14. Cost</h2>
