@@ -1,0 +1,24 @@
+groups:
+  - name: container-security
+    rules:
+      - alert: ScannerExporterUnavailable
+        expr: up{job="container-security"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Scan history exporter is unavailable
+      - alert: ImageScanStale
+        expr: time() - vulnerability_scan_timestamp_seconds > 172800
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Latest image scan is older than 48 hours
+      - alert: CriticalVulnerabilitiesPresent
+        expr: vulnerability_findings{severity="CRITICAL"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Active critical image vulnerabilities detected

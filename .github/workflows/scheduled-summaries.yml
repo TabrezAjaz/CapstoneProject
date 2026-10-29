@@ -62,6 +62,7 @@ jobs:
           fi
           python -m reporters.cli "${artifacts[@]}" --period "$PERIOD" --formats json,html,pdf \
             --output-dir reports --title "${PERIOD^} Container Vulnerability Summary"
+          python -m dashboard.cli "${artifacts[@]}" --metrics-file reports/scan-metrics.prom
       - name: Send Slack summary
         if: always() && env.SLACK_WEBHOOK_URL != ''
         run: |

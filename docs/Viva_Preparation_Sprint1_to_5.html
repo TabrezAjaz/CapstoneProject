@@ -90,7 +90,7 @@ footer{background:var(--navy);color:#a9c0c8;padding:26px 24px;text-align:center;
   <h1>Container Image Vulnerability Scanner with Reporting</h1>
   <p class="lead">Sprint 1 se Sprint 5 tak — implementation, design decisions, security, testing aur exam-style tricky questions ke saath detailed answers. Har answer project ke real code aur evidence par based hai.</p>
   <div class="chips">
-    <span class="chip">Trivy 0.74.0</span><span class="chip">Python wrapper 0.3.0</span>
+    <span class="chip">Trivy 0.74.0</span><span class="chip">Python wrapper 0.5.0</span>
     <span class="chip">GitHub Actions</span><span class="chip">Jenkins</span>
     <span class="chip">Slack</span><span class="chip">28 automated tests</span>
     <span class="chip">Sprint 1–3 implemented</span>
@@ -120,12 +120,12 @@ footer{background:var(--navy);color:#a9c0c8;padding:26px 24px;text-align:center;
   <div class="facts">
     <div class="fact"><b>Project</b><span>Container vulnerability scanner + CI gate + reports</span></div>
     <div class="fact"><b>Repo / branch</b><span>TabrezAjaz/CapstoneProject · sprint-3</span></div>
-    <div class="fact"><b>Scanner engine</b><span>Trivy 0.74.0 + Python wrapper 0.3.0</span></div>
+    <div class="fact"><b>Scanner engine</b><span>Trivy 0.74.0 + Python wrapper 0.5.0</span></div>
     <div class="fact"><b>Policy default</b><span>fail_on: HIGH</span></div>
     <div class="fact"><b>Exit codes</b><span>0 pass · 1 block · 2 config · 3 operational</span></div>
     <div class="fact"><b>Artifact schema</b><span>1.0 (scan_id, UTC time, scanner, source)</span></div>
     <div class="fact"><b>Report formats</b><span>JSON · HTML · PDF + SHA-256 manifest</span></div>
-    <div class="fact"><b>Automated tests</b><span>28 passing (offline, mocked)</span></div>
+    <div class="fact"><b>Automated tests</b><span>77 passing + real browser checks</span></div>
     <div class="fact"><b>CI platforms</b><span>GitHub Actions + Jenkins</span></div>
     <div class="fact"><b>Notifications</b><span>Slack (severity-aware, retry-safe)</span></div>
     <div class="fact"><b>Images in config</b><span>nginx, python:3.12-slim, alpine:3.19, node:18</span></div>
@@ -137,14 +137,14 @@ footer{background:var(--navy);color:#a9c0c8;padding:26px 24px;text-align:center;
     <tbody>
       <tr><td>1</td><td>Scanning foundation — repo, Trivy, first scans, CVE DB, Python wrapper</td><td><b style="color:var(--green)">Complete &amp; verified</b></td></tr>
       <tr><td>2</td><td>CI/CD gate — thresholds, exit codes, GitHub Actions, Jenkins, tests</td><td><b style="color:var(--green)">Complete &amp; verified</b></td></tr>
-      <tr><td>3</td><td>Reporting &amp; notifications — JSON/HTML/PDF, Slack, daily/weekly summaries</td><td><b style="color:var(--amber)">Implemented; Slack delivery pending</b></td></tr>
-      <tr><td>4</td><td>Web dashboard — Prometheus metrics + Grafana trend tracking</td><td><b style="color:var(--blue)">Planned (design ready)</b></td></tr>
-      <tr><td>5</td><td>Advanced customisation — CVE allowlist, rescan, retry hardening</td><td><b style="color:var(--blue)">Planned (design ready)</b></td></tr>
+      <tr><td>3</td><td>Reporting &amp; notifications — JSON/HTML/PDF, Slack, daily/weekly summaries</td><td><b style="color:var(--green)">Jenkins delivery verified; GitHub secret pending</b></td></tr>
+      <tr><td>4</td><td>Web dashboard — SQLite, Flask/Chart.js, Prometheus + Grafana</td><td><b style="color:var(--green)">Implemented &amp; verified</b></td></tr>
+      <tr><td>5</td><td>Advanced customisation — CVE allowlist, rescan, retry hardening</td><td><b style="color:var(--green)">Implemented &amp; verified</b></td></tr>
       <tr><td>6</td><td>Docs, cross-platform testing, deployment script, feedback</td><td><b>Not started</b></td></tr>
     </tbody>
   </table>
 
-  <div class="callout ok"><b>Sabse pehle ye bolna:</b> "Sprint 1 mein scanner foundation banaya, Sprint 2 mein usko CI gate bana diya, Sprint 3 mein evidence + notification layer add kar diya. Sprint 4 aur 5 ka design ready hai — dashboard aur exception handling."</div>
+  <div class="callout ok"><b>Sabse pehle ye bolna:</b> "Sprint 1 mein scanner foundation, Sprint 2 mein CI gate, Sprint 3 mein reports aur real Jenkins Slack delivery, Sprint 4 mein persistent history aur Prometheus/Grafana dashboard, aur Sprint 5 mein expiring exceptions, fresh rescans aur bounded retries implement kiye. 77 tests aur real desktop/mobile browser evidence hai. GitHub Slack secret ek separate account setup step hai."</div>
 </section>
 
 <!-- ============ A. ARCHITECTURE ============ -->
@@ -251,13 +251,13 @@ config.yaml  → single source of policy truth</pre>
 
   <details class="qa"><summary>Ye project production-ready hai? Limitations kya hain?<span class="tag t-trap">Viva traps</span></summary>
   <div class="body">
-    <p><b>Honest answer better hai.</b> Ye production-usable hai lekin kuch deliberate scope limits hain:</p>
+    <p><b>Honest answer better hai.</b> Ye verified local demonstration hai; public production deployment ke liye additional hardening chahiye:</p>
     <ul>
       <li>Currently <code>pkg_types: [os]</code> — sirf OS packages scan hote hain, language dependencies (npm, pip) nahi. Ye Sprint 1 mein choose kiya gaya tha taaki base images fairly compare ho sakein. Production mein <code>pkg_types</code> hata kar poora scan karenge.</li>
-      <li>Dashboard aur allowlist abhi implemented nahi — Sprint 4 aur 5 mein hai.</li>
-      <li>Metrics history Prometheus par depend karegi (Sprint 4); abhi koi trend database nahi.</li>
+      <li>Dashboard localhost-only hai, API read-only hai, aur Grafana anonymous Viewer allow karta hai. Public hosting ke liye auth, TLS aur production WSGI server chahiye.</li>
+      <li>SQLite original scan history rakhta hai; Prometheus scraping start hone ke baad ke samples rakhta hai. Purane Prometheus samples fabricate/backfill nahi kiye.</li>
       <li>Private registry ke liye credentials configuration chahiye — design mein docs hain, live setup nahi.</li>
-      <li>Slack ke liye real webhook abhi configure nahi hua (workspace access pending).</li>
+      <li>Jenkins se real Slack delivery verified hai. GitHub secret alag configure karna hai; exposed webhook rotation aur channel screenshots account-owner actions hain.</li>
     </ul>
     <p><b>Bonus point bolo:</b> "Main deliberate scope boundary maintain kar raha hoon — har sprint ka apna deliverable hai, isliye Sprint 3 ke reports mein dashboard code nahi ghusa."</p>
   </div></details>
@@ -834,7 +834,8 @@ docker run --rm -v trivy-cache:/root/.cache aquasec/trivy:0.74.0 image nginx:lat
         <tr><td>Jenkins main pipeline</td><td>Build #2 success (reports archived), build #3 policy-blocked (reports still archived)</td></tr>
         <tr><td>Jenkins summaries</td><td>Daily build #1 (59s) aur weekly build #1 (40s) — dono mein 4 fresh scan artifacts + report</td></tr>
         <tr><td>Scheduling</td><td><code>H 2 * * *</code> daily, <code>H 3 * * 1</code> weekly (UTC), next run timestamp verified</td></tr>
-        <tr><td>Pending</td><td>Real Slack delivery (workspace webhook configure hona baaki hai)</td></tr>
+        <tr><td>Real Slack delivery</td><td>Main #4 HIGH, #5 CRITICAL, daily #16 aur weekly #4 verified. Daily #17 aur weekly #5 default auto/NOTIFY=true ke saath correct cadence aur delivery verify karte hain.</td></tr>
+        <tr><td>GitHub scheduling</td><td>Sprint 3 main mein merged; daily summary workflow #1 success. GitHub Slack step secret absent hone par skipped hai, delivered claim nahi hai.</td></tr>
       </tbody>
     </table>
   </div></details>
@@ -842,8 +843,8 @@ docker run --rm -v trivy-cache:/root/.cache aquasec/trivy:0.74.0 image nginx:lat
 
 <!-- ============ E. SPRINT 4 ============ -->
 <section id="s4">
-  <h2>E. Sprint 4 — Web dashboard for historical tracking (planned)</h2>
-  <div class="callout warn"><b>Honest framing:</b> Sprint 4 implement nahi hua hai. Bolna aise: "Sprint 4 ka requirement dashboard + Prometheus + Grafana hai; humara Sprint 3 ka report JSON exactly wo data deta hai jo metrics banane ke liye chahiye, aur design freeze ho chuka hai." Iske baad design confidently explain karo.</div>
+  <h2>E. Sprint 4 — Web dashboard for historical tracking</h2>
+  <div class="callout ok"><b>Verified implementation:</b> SQLite history, Flask read-only API, Chart.js dashboard, Prometheus exporter aur provisioned Grafana dashboard running hain. Isolated Sprint 4 branch par 35 tests pass; Prometheus target UP, GitHub run #23 SUCCESS, aur exact desktop/mobile browser checks pass hain. Evidence <code>docs/Sprint4_Dashboard_and_Monitoring_Report.html</code> mein hai.</div>
 
   <details class="qa"><summary>Sprint 4 ka requirement kya hai?<span class="tag t-s4">Sprint 4</span></summary>
   <div class="body">
@@ -875,16 +876,15 @@ docker run --rm -v trivy-cache:/root/.cache aquasec/trivy:0.74.0 image nginx:lat
     <p>Ye sabse technical Sprint 4 sawaal hai. Do options the:</p>
     <ol>
       <li><b>Scanner ko long-running HTTP service banana</b> jisme <code>/metrics</code> endpoint ho — lekin ye CI job ke liye galat model hai, kyunki scan ke baad process exit ho jaata hai.</li>
-      <li><b>Prometheus textfile collector (chosen design):</b> scan ke baad ek chhota exporter script report JSON padhta hai aur ek <code>.prom</code> file likhta hai jisme metrics text format mein hote hain. Node exporter ka textfile collector usko expose karta hai, aur Prometheus scrape karta hai.</li>
+      <li><b>Separate persistent exporter (implemented):</b> <code>dashboard.cli</code> normalized scan artifacts SQLite mein import karta hai. <code>dashboard.app</code> ka read-only <code>/metrics</code> endpoint latest persisted scans expose karta hai; Prometheus har 15 seconds scrape karta hai. CI ki <code>scan-metrics.prom</code> archived evidence hai, automatic remote history push nahi. Node Exporter/Pushgateway required nahi hain.</li>
     </ol>
-    <pre># reports/vulnerability-daily-xxx.json
-#        ↓  metrics exporter
+    <pre># normalized scan artifacts -> SQLite -> /metrics
 vulnerability_findings{image="alpine:3.19",severity="HIGH"} 2
-vulnerability_blocking_total{image="alpine:3.19"} 2
+  vulnerability_blocking_findings{image="alpine:3.19"} 2
 vulnerability_policy_blocked{image="alpine:3.19"} 1
-scan_duration_seconds{image="alpine:3.19"} 12.4
-scan_failures_total 0</pre>
-    <p><b>Kyun ye better hai:</b> CI job ke ephemeral nature ke saath compatible, koi always-on service nahi chahiye, aur same exporter local aur CI dono jagah chalta hai.</p>
+  vulnerability_resolved_findings{image="alpine:3.19"} 0
+  vulnerability_suppressed_findings{image="alpine:3.19"} 0</pre>
+    <p><b>Kyun:</b> scanner short-lived rehta hai, lekin separate exporter scan ke baad bhi available rehta hai. SQLite ke through imports idempotent aur history durable hai. Hosted CI laptop ke localhost par direct push nahi kar sakta; archived normalized artifacts import karte hain.</p>
   </div></details>
 
   <details class="qa"><summary>Kaunse metrics define karoge?<span class="tag t-s4">Sprint 4</span></summary>
@@ -893,15 +893,16 @@ scan_failures_total 0</pre>
       <thead><tr><th>Metric</th><th>Type</th><th>Labels</th><th>Purpose</th></tr></thead>
       <tbody>
         <tr><td><code>vulnerability_findings</code></td><td>Gauge</td><td>image, severity</td><td>Current counts per severity</td></tr>
-        <tr><td><code>vulnerability_blocking_total</code></td><td>Gauge</td><td>image</td><td>Threshold cross karne wale findings</td></tr>
+        <tr><td><code>vulnerability_blocking_findings</code></td><td>Gauge</td><td>image</td><td>Threshold cross karne wale active findings</td></tr>
         <tr><td><code>vulnerability_policy_blocked</code></td><td>Gauge</td><td>image</td><td>1 = blocked, 0 = passed (gate state)</td></tr>
-        <tr><td><code>scan_duration_seconds</code></td><td>Gauge</td><td>image</td><td>Scan time — performance trend</td></tr>
-        <tr><td><code>scan_artifacts_total</code></td><td>Counter</td><td>period</td><td>Kitne scans hue (activity)</td></tr>
-        <tr><td><code>scan_failures_total</code></td><td>Counter</td><td>image, reason</td><td>Operational failures — reliability</td></tr>
-        <tr><td><code>report_generated_timestamp</code></td><td>Gauge</td><td>period</td><td>Ye report kab bani (staleness detect)</td></tr>
+        <tr><td><code>vulnerability_new_findings</code></td><td>Gauge</td><td>image</td><td>Previous scan ke comparison mein naye advisory/package pairs</td></tr>
+        <tr><td><code>vulnerability_resolved_findings</code></td><td>Gauge</td><td>image</td><td>Previous pairs jo ab active ya suppressed dono mein absent hain</td></tr>
+        <tr><td><code>vulnerability_suppressed_findings</code></td><td>Gauge</td><td>image</td><td>Approved risk, remediation nahi</td></tr>
+        <tr><td><code>vulnerability_scans_stored</code></td><td>Gauge</td><td>none</td><td>Persisted scan count, process counter nahi</td></tr>
+        <tr><td><code>vulnerability_scan_timestamp_seconds</code></td><td>Gauge</td><td>image</td><td>Actual latest scan timestamp; staleness detect hoti hai</td></tr>
       </tbody>
     </table>
-    <p><b>"Resolved" metric kaise:</b> current count aur peechhle count ka difference. Prometheus mein <code>delta()</code>/<code>increase()</code> se trend nikalta hai, ya Grafana transform se "previous value minus current" dikha sakte hain.</p>
+    <p><b>"Resolved" metric kaise:</b> advisory ID + package ke exact sets compare karte hain. Dono scans mein total 10 ho sakta hai, lekin ek old pair absent aur ek new pair present ho to found=1, resolved=1. Sirf count subtraction galat hota. Suppressed pairs comparison mein included hain, isliye allowlist approval fake remediation nahi banta. First observation baseline hai; gauges latest transition dikhate hain, cumulative counters nahi.</p>
   </div></details>
 
   <details class="qa"><summary>Grafana dashboard mein kaunse panels honge?<span class="tag t-s4">Sprint 4</span></summary>
@@ -911,9 +912,9 @@ scan_failures_total 0</pre>
       <li><b>Trend over time (time series):</b> <code>vulnerability_findings</code> by severity — badh raha hai ya ghat raha hai</li>
       <li><b>Per-image table:</b> image, blocking findings, policy state — kis image par focus karna hai</li>
       <li><b>Blocked vs passed:</b> gate effectiveness over time</li>
-      <li><b>Top vulnerable images:</b> sorted bar chart</li>
-      <li><b>Scan health:</b> scan duration + failure counter (pipeline reliability)</li>
-      <li><b>Staleness indicator:</b> last report timestamp — agar stale ho to dashboard turant bataye</li>
+      <li><b>Transition panels:</b> newly observed, resolved aur suppressed findings ke gauges</li>
+      <li><b>Scan health:</b> exporter UP state aur configured staleness/down alert rules; duration/failure counters export nahi kiye jaate</li>
+      <li><b>Staleness indicator:</b> actual latest scan age, report rendering ka time nahi</li>
     </ul>
   </div></details>
 
@@ -924,41 +925,41 @@ scan_failures_total 0</pre>
       <li><b>Image filter:</b> label values se dropdown — <code>label_values(vulnerability_findings, image)</code></li>
       <li><b>Severity filter:</b> <code>label_values(vulnerability_findings, severity)</code> — multi-select</li>
       <li><b>Date range:</b> Grafana ka built-in time picker (last 7/30/90 days, custom)</li>
-      <li><b>Cadence filter:</b> daily vs weekly reports</li>
+      <li><b>Custom UI:</b> same image/severity filters plus explicit from/to UTC dates, scan history aur audit details</li>
     </ul>
     <p>Ye variables panels ke queries mein interpolate ho jaate hain — isliye ek hi dashboard me sab filters lagte hain, alag page nahi banane padte.</p>
   </div></details>
 
   <details class="qa"><summary>Dashboard kahan host karoge? Cost?<span class="tag t-s4">Sprint 4</span></summary>
   <div class="body">
-    <p>Docker Compose se local: Prometheus + Grafana (+ node exporter textfile collector). Koi managed service nahi.</p>
+    <p>Docker Compose se local: persistent dashboard exporter + Prometheus + Grafana. Koi managed service, Node Exporter ya Pushgateway nahi.</p>
     <ul>
       <li>Both open source, community editions free</li>
       <li>Local Docker → koi cloud bill nahi</li>
       <li>Prometheus retention chhota (15 days) — disk usage minimal</li>
-      <li>CI se metrics persist karne ke liye simple approach: GitHub Actions par metrics file artifact push, ya Jenkins par archive — full remote push gateway design Sprint 4 ka open item hai</li>
+      <li>CI normalized scans aur metrics file archive karta hai. Original artifacts ko local CLI importer se SQLite mein ingest karte hain; reimport duplicate scans create nahi karta.</li>
     </ul>
   </div></details>
 
-  <details class="qa"><summary>Custom dashboard (Flask + Chart.js) kyun nahi? Grafana kyun better?<span class="tag t-s4">Sprint 4</span></summary>
+  <details class="qa"><summary>Custom dashboard aur Grafana dono kyun implement kiye?<span class="tag t-s4">Sprint 4</span></summary>
   <div class="body">
-    <p>Assignment "Grafana (or a custom UI)" deta hai — dono valid hain. Grafana chuna kyunki:</p>
+    <p>Dono ka role alag hai: custom UI original scan artifacts/SQLite history ko explore karta hai; Grafana Prometheus scrape history ko visualize karta hai.</p>
     <ul>
       <li>Time-series queries, aggregation aur retention Prometheus handle karta hai — humein khud datetime logic nahi likhni</li>
       <li>Filters, zoom, refresh, alerting built-in</li>
-      <li>Custom UI mein humein storage, API, auth aur chart rendering sab likhna padta — scope creep</li>
+      <li>Custom UI mein implemented SQLite storage, read-only API, image/date/severity filters, scan drilldown, audit details aur JSON download milte hain</li>
       <li>Industry-standard tool — examiner ke liye familiar, aur CV/resume value bhi</li>
     </ul>
-    <p><b>Custom UI ka ek valid use case bhi bata sakte ho:</b> agar sirf "latest report dikhana" ho (no history), to Sprint 3 ki HTML report hi sufficient hai — isliye Sprint 4 mein Grafana ka historical role justify hota hai.</p>
+    <p><b>Important boundary:</b> SQLite purane original scan timestamps rakh sakta hai. Prometheus sirf scrape start hone ke baad ke samples rakhta hai; old time-series samples backfill/fabricate nahi hote.</p>
   </div></details>
 
   <details class="qa"><summary>Sprint 3 aur Sprint 4 ka connection kya hai?<span class="tag t-s4">Sprint 4</span></summary>
   <div class="body">
-    <p>Sprint 3 ka <b>canonical report JSON</b> hi Sprint 4 ka data source hai. Isliye:</p>
+    <p>Sprint 3 ke <b>schema 1.0 normalized scan artifacts</b> reporters aur dashboard ka shared source hain. Canonical report JSON aur raw Trivy output importer ke valid inputs nahi hain. Isliye:</p>
     <ul>
-      <li>Rescan ki zarurat nahi — exporter sirf existing report padhta hai</li>
-      <li>Metrics ki values report ke totals se aati hain, isliye dashboard aur report kabhi contradict nahi karte</li>
-      <li>Kyunki report mein <code>generated_at</code> aur <code>report_id</code> hai, traceability dashboard se report tak jaati hai</li>
+      <li>Existing evidence import karne ke liye rescan ki zarurat nahi; importer original normalized artifacts padhta hai</li>
+      <li>Same strict artifact loader use hota hai; dashboard filters/latest-image selection aur report period alag ho to displayed totals naturally different ho sakte hain</li>
+      <li><code>scan_id</code> aur <code>scanned_at</code> se original observation trace hoti hai; generated report ka apna report_id aur manifest hota hai</li>
     </ul>
     <p><b>Yahi "architecture planned up-front" ka proof hai:</b> Sprint 3 ne Sprint 4 ke liye data shape already bana diya.</p>
   </div></details>
@@ -977,8 +978,8 @@ scan_failures_total 0</pre>
 
 <!-- ============ F. SPRINT 5 ============ -->
 <section id="s5">
-  <h2>F. Sprint 5 — Exceptions &amp; advanced handling (planned)</h2>
-  <div class="callout warn"><b>Honest framing:</b> "Sprint 5 ka requirement CVE allowlist, rescan aur retry hardening hai. Repository mein <code>exceptions/allowlist.yaml</code> ka structure already design ho chuka hai, aur scanner usko <code>exceptions_file</code> config key se reference karta hai — implementation Sprint 5 mein hai."</div>
+  <h2>F. Sprint 5 — Exceptions &amp; advanced handling</h2>
+  <div class="callout ok"><b>Verified implementation:</b> expiring scoped allowlist, raw/suppressed audit evidence, fresh rescan lineage, classified retries, process deadlines aur atomic artifacts implement hain. Real Alpine demo: approved exit 0, expired exit 1, missing policy exit 2. Default production allowlist empty hai; report aur original evidence <code>docs/Sprint5_Exceptions_and_Reliability_Report.html</code> mein hain.</div>
 
   <details class="qa"><summary>Sprint 5 ka requirement kya hai?<span class="tag t-s5">Sprint 5</span></summary>
   <div class="body">
@@ -1048,15 +1049,15 @@ exception filter (allowlist + expiry check)
   <div class="body">
     <p>Achha counter-sawaal hai. Honest answer:</p>
     <ul>
-      <li>Trivy ka <code>.trivyignore</code> CVEs suppress kar sakta hai, <b>lekin usme reason, expiry, owner ya audit metadata nahi hota</b> — bas ek ID list</li>
+      <li>Trivy ki native ignore capabilities exist karti hain; hum unke across blanket claims nahi karte. Humare project ko same Python gate, mandatory reason/expiry aur own artifact/report audit contract chahiye.</li>
       <li>Humara format <code>reason</code> + <code>expires</code> enforce karta hai, isliye governance built-in hai</li>
       <li>Humara filtering scanner ke andar hai (policy se pehle), to suppressed findings ko report mein separately record kar sakte hain</li>
-      <li><b>Practical hybrid:</b> implementation mein hum <code>.trivyignore</code> format ko internally reuse kar sakte hain (compatibility ke liye) aur apni YAML ko usme translate kar sakte hain — isse do implementations maintain nahi karni padti</li>
+      <li><b>Actual implementation:</b> Trivy ka implicit ignorefile disabled hai; custom allowlist wrapper mein raw findings ke baad apply hoti hai. Isse unaudited local ignorefile gate ko bypass nahi karta.</li>
     </ul>
     <p><b>Isse ye dikhta hai</b> ki tum existing tool capabilities jaante ho, blind reinvention nahi kar rahe.</p>
   </div></details>
 
-  <details class="qa"><summary>Rescan functionality kya propose karte ho?<span class="tag t-s5">Sprint 5</span></summary>
+  <details class="qa"><summary>Fresh rescan functionality kaise implement ki?<span class="tag t-s5">Sprint 5</span></summary>
   <div class="body">
     <p>Teen triggers pe rescan:</p>
     <ol>
@@ -1064,18 +1065,18 @@ exception filter (allowlist + expiry check)
       <li><b>Database refresh ke baad</b> — naya CVE add hone par purani "clean" image ab vulnerable ho sakti hai. Isliye DB update ke baad critical images rescan karna chahiye</li>
       <li><b>Image digest change par</b> — naya patch deploy hua to dobara verify karo (same tag, naya digest)</li>
     </ol>
-    <p><b>Implementation note:</b> rescan ke liye naya logic nahi chahiye — wahi <code>scanner.trivy_scanner</code> command dobara chal jaati hai. Isliye ye already Sprint 3 scheduling se effectively available hai; Sprint 5 mein hum isko explicit policy aur reporting ke saath formalise karenge.</p>
+    <p><b>Actual CLI:</b> <code>python -m scanner.trivy_scanner --rescan-artifact previous.json --refresh-db</code>. Image previous validated artifact se milti hai; Trivy dobara invoke hota hai, new UUID/UTC time aata hai aur <code>rescan_of</code> old scan ID preserve karta hai. Automatic registry digest watcher implement nahi hai; digest/tag change par ye command manually ya existing schedule se chalti hai.</p>
   </div></details>
 
-  <details class="qa"><summary>Sprint 5 mein retry/error handling kya add karoge? Sprint 2/3 mein nahi hai?<span class="tag t-s5">Sprint 5</span></summary>
+  <details class="qa"><summary>Sprint 5 mein retry/error handling kya add kiya? Sprint 2/3 mein nahi hai?<span class="tag t-s5">Sprint 5</span></summary>
   <div class="body">
     <p>Sprint 2/3 mein kuch retry already hai: Jenkins mein DB refresh par <code>retry(2)</code>, aur Slack delivery mein bounded 3-attempt retry.</p>
-    <p>Sprint 5 mein ye expand karenge:</p>
+    <p>Sprint 5 mein implemented controls:</p>
     <ul>
-      <li><b>Registry pull flakiness:</b> image pull transient failure par bounded retry (network hiccup se build red na ho)</li>
-      <li><b>Trivy DB download retry</b> with backoff (Sprint 2 mein sirf Jenkins mein tha, use cross-platform karna)</li>
-      <li><b>Failure classification:</b> transient (retry karo) vs permanent (turant fail) — jaise "image not found" retry karne ka koi fayda nahi</li>
-      <li><b>Clear diagnostics:</b> failure par actionable message — config problem ho to exact key batao, registry problem ho to registry URL (credentials ke bina)</li>
+      <li><b>Registry flakiness:</b> default 2 retries after first attempt; delays 1s, 2s; configurable retries 0..5 aur backoff 0..30s</li>
+      <li><b>DB refresh:</b> <code>--refresh-db</code> same classified retry helper use karta hai</li>
+      <li><b>Failure classification:</b> recognized network/timeouts/429/5xx transient; auth errors, missing executable/manifest aur invalid JSON permanent fail-fast</li>
+      <li><b>Bounds aur integrity:</b> per-attempt process deadline Trivy timeout + 30s; artifact atomic replace; malformed empty objects/booleans kabhi clean scan nahi bante</li>
     </ul>
     <p><b>Principle:</b> retry sirf transient failures par, aur <b>fail-closed</b> — retry exhaust hone par build fail, kabhi silent pass nahi.</p>
   </div></details>
@@ -1141,7 +1142,7 @@ exception filter (allowlist + expiry check)
 
   <details class="qa"><summary>Kitne tests hain aur kis type ke?<span class="tag t-test">Testing</span></summary>
   <div class="body">
-    <p><b>28 tests</b>, sab deterministic aur offline (~3 seconds mein complete).</p>
+    <p><b>77 tests</b>, deterministic aur offline. Separate real-browser Playwright checks desktop/mobile UI aur canvas pixels verify karte hain. Isolated Sprint 4 branch par 35 tests the.</p>
     <table>
       <thead><tr><th>Area</th><th>Kya cover hua</th></tr></thead>
       <tbody>
@@ -1154,7 +1155,7 @@ exception filter (allowlist + expiry check)
         <tr><td>Notifications</td><td>Unsafe webhook rejection, mention sanitization, severity colour, retry on 429, no retry on 400, secret-safe errors</td></tr>
       </tbody>
     </table>
-    <p><b>Kya nahi hai (honest):</b> live Trivy/Docker integration tests deliberately CI mein hain (real scan wahan hota hai), aur end-to-end tests mock se avoid kiye kyunki wo flaky hote.</p>
+    <p><b>Additional coverage:</b> exceptions/expiry/scoping, retry classification/exhaustion, process deadlines, malformed result shapes, atomic write failure, raw/suppressed report audit, SQLite imports, transitions aur API filters. Real Trivy scans, running Docker monitoring aur exact browser checks separately verify hue. Live network fault injection nahi ki; retry failures deterministic tests se exercise kiye.</p>
   </div></details>
 
   <details class="qa"><summary>Supply-chain security ke liye kya kiya?<span class="tag t-sec">Security</span></summary>
@@ -1286,14 +1287,14 @@ exception filter (allowlist + expiry check)
     </ul>
   </div></details>
 
-  <details class="qa"><summary>Sprint 4 aur 5 abhi implement nahi hain — viva mein kaise defend karoge?<span class="tag t-trap">Viva traps</span></summary>
+  <details class="qa"><summary>Sprint 4 aur 5 complete hone ka evidence kya dikhaoge?<span class="tag t-trap">Viva traps</span></summary>
   <div class="body">
-    <p><b>Honesty + design clarity se defend karo:</b></p>
-    <blockquote>"Sprint 1, 2 aur 3 complete aur verified hain — evidence ke saath. Sprint 4 aur 5 ka scope dashboard aur exception handling hai, aur unke liye required interfaces already bane hue hain:"</blockquote>
+    <p><b>Implementation + repeatable evidence dikhao:</b></p>
+    <blockquote>"Sprint 4 ka isolated branch 35 tests pass karta hai; custom dashboard, Prometheus UP target aur Grafana screenshots hain. Sprint 5 integrated suite 77 tests pass karti hai, aur actual approved/expired/missing-policy runs exits 0/1/2 demonstrate karte hain."</blockquote>
     <ul>
-      <li>Sprint 4 ko Sprint 3 ka canonical report JSON chahiye — wo maujood hai, isliye exporter + Grafana wiring bacha hai</li>
-      <li>Sprint 5 ko <code>exceptions/allowlist.yaml</code> aur <code>exceptions_file</code> config key chahiye — structure design ho chuka hai</li>
-      <li><code>dashboard/</code> aur <code>exceptions/</code> folders Sprint 1 se reserved hain — yaani plan upfront tha</li>
+      <li>Sprint 4 report: genuine desktop/mobile screenshots, exact browser check JSON, Prometheus target aur provisioned Grafana</li>
+      <li>Sprint 5 report: original baseline/rescan/approved/expired JSON, audit HTML/PDF/JSON + SHA manifest, aur genuine JUnit XML</li>
+      <li>Raw=active+suppressed invariant aur suppression-is-not-remediation tests governance ko prove karte hain</li>
     </ul>
     <p><b>Ye dikhata hai</b> ki tum incremental delivery kar rahe ho, aur architecture aage ke sprints ke liye ready hai — jo assignment ka spirit hai.</p>
   </div></details>
@@ -1326,7 +1327,7 @@ exception filter (allowlist + expiry check)
     <thead><tr><th>Sawaal</th><th>Jawab</th></tr></thead>
     <tbody>
       <tr><td>Trivy version?</td><td>0.74.0</td></tr>
-      <tr><td>Wrapper version?</td><td>0.3.0</td></tr>
+      <tr><td>Wrapper version?</td><td>0.5.0</td></tr>
       <tr><td>Default <code>fail_on</code>?</td><td>HIGH</td></tr>
       <tr><td>Exit codes?</td><td>0 pass, 1 policy block, 2 config error, 3 operational</td></tr>
       <tr><td>Total tests?</td><td>28, sab offline</td></tr>
@@ -1373,10 +1374,10 @@ exception filter (allowlist + expiry check)
       <tr><td><code>ci/Jenkinsfile</code></td><td>Main pipeline — gate, reports, optional Slack notify</td><td>2–3</td></tr>
       <tr><td><code>ci/Jenkinsfile.summaries</code></td><td>Daily/weekly summary pipeline</td><td>3</td></tr>
       <tr><td><code>docker/Dockerfile</code></td><td>Scanner image — pinned Trivy + Python wrapper</td><td>1–2</td></tr>
-      <tr><td><code>tests/</code></td><td>28 deterministic tests + synthetic Trivy fixtures</td><td>2–3</td></tr>
-      <tr><td><code>exceptions/allowlist.yaml</code></td><td>Exception template (reason + expiry design)</td><td>5 (planned)</td></tr>
+      <tr><td><code>tests/</code></td><td>77 deterministic tests + controlled scanner/policy fixtures</td><td>2–5</td></tr>
+      <tr><td><code>exceptions/allowlist.yaml</code></td><td>Active production policy, intentionally empty; exact reason/expiry/scopes enforced</td><td>5</td></tr>
       <tr><td><code>docs/SPRINT3_REPORT_SCHEMA.md</code></td><td>Artifact + report contract documentation</td><td>3</td></tr>
-      <tr><td><code>dashboard/</code></td><td>Reserved for Prometheus + Grafana config</td><td>4 (planned)</td></tr>
+      <tr><td><code>dashboard/</code></td><td>SQLite history, Flask/Chart.js UI, exporter, Prometheus/Grafana and browser checks</td><td>4</td></tr>
     </tbody>
   </table>
 </section>
@@ -1457,7 +1458,7 @@ python -m notifiers.cli reports/vulnerability-run-<clean>.json
   <h2>Final tips</h2>
   <div class="callout ok">
     <ul>
-      <li><b>Numbers yaad rakho:</b> Trivy 0.74.0, wrapper 0.3.0, 28 tests, exit 0/1/2/3, fail_on HIGH, schema 1.0, 4 images, ₹0 cost</li>
+      <li><b>Numbers yaad rakho:</b> Trivy 0.74.0, wrapper 0.5.0, 77 tests, exit 0/1/2/3, fail_on HIGH, schema 1.0, 4 configured images, ₹0 cost</li>
       <li><b>Har answer mein "kyun" bolo</b> — examiner design decision dekhna chahta hai, sirf feature list nahi</li>
       <li><b>Limitations khud batao</b> — jo apni kami maan leta hai, us par examiner kam shak karta hai</li>
       <li><b>Ek hi punchline yaad rakho:</b> "Trivy engine hai, humne policy, reporting, notification aur governance layer banayi — aur poora system fail-closed hai."</li>
@@ -1470,7 +1471,7 @@ python -m notifiers.cli reports/vulnerability-run-<clean>.json
 
 <footer>
   Container Image Vulnerability Scanner with Reporting · Viva Preparation (Sprint 1–5) · 17 October 2026<br>
-  Sprint 1–3 implemented and verified · Sprint 4–5 design ready
+  Sprint 1–5 implemented with evidence · GitHub Slack secret and owner-side rotation remain separate setup actions
 </footer>
 
 <script>

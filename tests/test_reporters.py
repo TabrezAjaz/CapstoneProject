@@ -46,3 +46,36 @@ def test_unknown_format_fails(tmp_path):
     document = build_document(load_artifacts([FIXTURES / "normalized-clean-v1.json"]))
     with pytest.raises(ReportError, match="Unsupported report format"):
         generate_reports(document, ["docx"], tmp_path)
+
+
+def test_suppression_audit_is_rendered_and_validated(tmp_path):
+    data = json.loads((FIXTURES / "normalized-scan-v1.json").read_text())
+    data["raw_summary"] = dict(data["summary"])
+    data["suppressed_findings"] = [{**finding, "exception": {
+        "id": finding["id"], "reason": "Approved <script>risk</script>", "expires": "2027-01-01"}}
+        for finding in data["findings"]]
+    data["findings"] = []
+    data["summary"] = {key: 0 for key in data["summary"]}
+    data["policy"].update(passed=True, blocking_findings=0)
+    path = tmp_path / "approved.json"
+    path.write_text(json.dumps(data))
+    document = build_document(load_artifacts([path]))
+    assert document.totals["suppressed_findings"] == 2
+    generate_reports(document, ["json", "html", "pdf"], tmp_path / "reports")
+    html = next((tmp_path / "reports").glob("*.html")).read_text()
+    assert "Approved exceptions" in html
+    assert "Approved &lt;script&gt;risk&lt;/script&gt;" in html
+    assert next((tmp_path / "reports").glob("*.pdf")).read_bytes().startswith(b"%PDF-")
+    data["raw_summary"]["HIGH"] += 1
+    path.write_text(json.dumps(data))
+    with pytest.raises(ReportError, match="suppression audit"):
+        load_artifacts([path])
+
+
+def test_forged_policy_pass_is_rejected(tmp_path):
+    data = json.loads((FIXTURES / "normalized-scan-v1.json").read_text())
+    data["policy"].update(passed=True, blocking_findings=0)
+    path = tmp_path / "forged.json"
+    path.write_text(json.dumps(data))
+    with pytest.raises(ReportError, match="Policy does not match"):
+        load_artifacts([path])

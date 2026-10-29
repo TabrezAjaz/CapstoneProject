@@ -13,6 +13,8 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
+import time
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
@@ -21,13 +23,15 @@ from typing import Any, Mapping, Sequence
 
 import yaml
 
+from .exceptions import ExceptionPolicyError, apply_allowlist, load_allowlist
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("trivy_scanner")
 
 SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
 SEVERITY_RANK = {"UNKNOWN": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 ARTIFACT_SCHEMA_VERSION = "1.0"
-WRAPPER_VERSION = "0.3.0"
+WRAPPER_VERSION = "0.5.0"
 DEFAULT_CONFIG: dict[str, Any] = {
     "scanner": {
         "severities": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
@@ -35,6 +39,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "ignore_unfixed": False,
         "pkg_types": ["os"],
         "timeout": "15m",
+        "retries": 2,
+        "retry_backoff": 1,
     },
     "output": {"dir": "./scan-results"},
     "images": ["nginx:latest"],
@@ -96,6 +102,8 @@ def load_config(path: str = "config.yaml", required: bool = False) -> dict[str, 
         config["output"].update(loaded["output"])
     if "images" in loaded:
         config["images"] = loaded["images"]
+    if "exceptions_file" in loaded:
+        config["exceptions_file"] = loaded["exceptions_file"]
     return config
 
 
@@ -125,21 +133,54 @@ def resolve_settings(args: argparse.Namespace, env: Mapping[str, str] | None = N
         choose(args.pkg_types, "SCANNER_PKG_TYPES", scanner.get("pkg_types")), "pkg_types"
     )]
     timeout = str(choose(args.timeout, "SCANNER_TIMEOUT", scanner.get("timeout"))).strip()
-    if not re.fullmatch(r"\d+(ms|s|m|h)", timeout):
+    if not re.fullmatch(r"[1-9]\d*(ms|s|m|h)", timeout):
         raise ConfigurationError("timeout must use Trivy duration syntax, for example 5m")
+    try:
+        retries = int(choose(args.retries, "SCANNER_RETRIES", scanner.get("retries")))
+        retry_backoff = float(choose(args.retry_backoff, "SCANNER_RETRY_BACKOFF", scanner.get("retry_backoff")))
+    except (ValueError, TypeError) as exc:
+        raise ConfigurationError("retries and retry_backoff must be numeric") from exc
+    if not 0 <= retries <= 5 or not 0 <= retry_backoff <= 30:
+        raise ConfigurationError("retries must be 0..5 and retry_backoff must be 0..30 seconds")
+    exception_path = choose(args.exceptions_file, "SCANNER_EXCEPTIONS_FILE", config.get("exceptions_file"))
+    if exception_path is not None:
+        if not isinstance(exception_path, str) or not exception_path.strip():
+            raise ConfigurationError("exceptions_file must be a non-empty path")
+        if args.exceptions_file is None and "SCANNER_EXCEPTIONS_FILE" not in env:
+            exception_path = str(Path(config_path).parent / exception_path)
+    try:
+        exception_policy = load_allowlist(exception_path)
+    except ExceptionPolicyError as exc:
+        raise ConfigurationError(str(exc)) from exc
     output_dir = str(choose(args.output_dir, "SCANNER_OUTPUT_DIR", config["output"].get("dir"))).strip()
     if not output_dir:
         raise ConfigurationError("output_dir cannot be empty")
     image = args.image or env.get("SCAN_IMAGE")
     images = config.get("images")
-    if args.all_configured:
-        if not isinstance(images, list) or not images:
+    rescan_of = ""
+    if args.rescan_artifact:
+        if args.all_configured or args.image:
+            raise ConfigurationError("--rescan-artifact cannot be combined with IMAGE or --all-configured")
+        from reporters.service import ReportError, load_artifacts
+        try:
+            previous = load_artifacts([args.rescan_artifact])[0]
+        except ReportError as exc:
+            raise ConfigurationError(str(exc)) from exc
+        selected_images = [previous["image"]]
+        rescan_of = previous["scan_id"]
+    elif args.all_configured:
+        if (not isinstance(images, list) or not images
+                or any(not isinstance(item, str) or not item.strip() for item in images)):
             raise ConfigurationError("images must be a non-empty list for --all-configured")
         selected_images = [str(item).strip() for item in images if str(item).strip()]
     elif image:
         selected_images = [image.strip()]
     else:
         raise ConfigurationError("Provide IMAGE, set SCAN_IMAGE, or use --all-configured")
+    if any(not isinstance(item, str) or not item or item.startswith("-")
+           or any(character.isspace() for character in item) or "://" in item
+           for item in selected_images):
+        raise ConfigurationError("Image references must be non-empty OCI references without whitespace or URL schemes")
     return {
         "images": selected_images,
         "severities": severities,
@@ -148,7 +189,49 @@ def resolve_settings(args: argparse.Namespace, env: Mapping[str, str] | None = N
         "pkg_types": pkg_types,
         "timeout": timeout,
         "output_dir": output_dir,
+        "exception_policy": exception_policy,
+        "retries": retries,
+        "retry_backoff": retry_backoff,
+        "refresh_db": args.refresh_db,
+        "rescan_of": rescan_of,
     }
+
+
+def _run_trivy(command: list[str], retries: int, backoff: float,
+               timeout_seconds: float) -> subprocess.CompletedProcess:
+    transient = ("timeout", "timed out", "connection reset", "connection refused", "temporary failure",
+                 "network is unreachable", "too many requests", "429", "502", "503", "504",
+                 "context deadline exceeded", "unexpected eof", "tls handshake")
+    permanent = ("unauthorized", "forbidden", "denied", "manifest unknown", "name unknown", "not found")
+    for attempt in range(retries + 1):
+        try:
+            proc = subprocess.run(command, capture_output=True, text=True, check=False,
+                                  timeout=timeout_seconds)
+        except FileNotFoundError as exc:
+            raise ScannerError("Trivy executable was not found") from exc
+        except subprocess.TimeoutExpired:
+            message = "Trivy execution timed out"
+        except OSError as exc:
+            raise ScannerError("Unable to start Trivy") from exc
+        else:
+            if proc.returncode == 0:
+                return proc
+            message = proc.stderr.strip() or f"Trivy exited with code {proc.returncode}"
+        lowered = message.lower()
+        retryable = any(marker in lowered for marker in transient) and not any(marker in lowered for marker in permanent)
+        if attempt >= retries or not retryable:
+            safe_message = re.sub(r"(https?://)[^/@\s]+:[^/@\s]+@", r"\1<redacted>@", message)
+            raise ScannerError(safe_message)
+        logger.warning("Transient Trivy failure; retry %d of %d", attempt + 1, retries)
+        time.sleep(min(backoff * (2 ** attempt), 30))
+    raise ScannerError("Trivy retry limit exhausted")
+
+
+def _timeout_seconds(timeout: str | None) -> float:
+    match = re.fullmatch(r"([1-9]\d*)(ms|s|m|h)", timeout or "15m")
+    if not match:
+        raise ScannerError("Invalid Trivy timeout")
+    return int(match[1]) * {"ms": .001, "s": 1, "m": 60, "h": 3600}[match[2]] + 30
 
 
 def scan_image(
@@ -157,11 +240,13 @@ def scan_image(
     ignore_unfixed: bool = False,
     pkg_types: Sequence[str] | None = None,
     timeout: str | None = None,
+    retries: int = 2,
+    retry_backoff: float = 1,
 ) -> dict[str, Any]:
     """Run Trivy and return normalized findings without applying policy."""
     selected = list(severities or SEVERITIES)
     cmd = ["trivy", "image", "--quiet", "--scanners", "vuln", "--format", "json",
-           "--severity", ",".join(selected)]
+            "--severity", ",".join(selected), "--ignorefile", os.devnull]
     if ignore_unfixed:
         cmd.append("--ignore-unfixed")
     if pkg_types:
@@ -170,23 +255,33 @@ def scan_image(
         cmd.extend(["--timeout", timeout])
     cmd.append(image)
     logger.info("Scanning image=%s severities=%s", image, ",".join(selected))
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    except FileNotFoundError as exc:
-        raise ScannerError("Trivy executable was not found") from exc
-    except OSError as exc:
-        raise ScannerError(f"Unable to start Trivy: {exc}") from exc
-    if proc.returncode != 0:
-        raise ScannerError(proc.stderr.strip() or f"Trivy exited with code {proc.returncode}")
+    proc = _run_trivy(cmd, retries, retry_backoff, _timeout_seconds(timeout))
     try:
         data = json.loads(proc.stdout or "{}")
     except json.JSONDecodeError as exc:
         raise ScannerError(f"Trivy returned invalid JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ScannerError("Trivy returned an invalid result object")
+    results = data.get("Results")
+    valid_empty = (data.get("SchemaVersion") == 2 and isinstance(data.get("ArtifactName"), str)
+                   and bool(data["ArtifactName"].strip()))
+    if (results is not None and not isinstance(results, list)) or (results is None and not valid_empty):
+        raise ScannerError("Trivy returned an invalid result object")
     counts: Counter[str] = Counter()
     findings: list[dict[str, Any]] = []
-    for result in data.get("Results", []) or []:
-        for vuln in result.get("Vulnerabilities", []) or []:
+    for result in results or []:
+        if not isinstance(result, dict):
+            raise ScannerError("Trivy returned invalid vulnerability results")
+        vulnerabilities = result.get("Vulnerabilities")
+        if vulnerabilities is not None and not isinstance(vulnerabilities, list):
+            raise ScannerError("Trivy returned invalid vulnerability results")
+        for vuln in vulnerabilities or []:
+            if (not isinstance(vuln, dict) or not isinstance(vuln.get("VulnerabilityID"), str)
+                    or not isinstance(vuln.get("PkgName"), str)):
+                raise ScannerError("Trivy returned an invalid vulnerability finding")
             severity = str(vuln.get("Severity") or "UNKNOWN").upper()
+            if severity not in SEVERITY_RANK:
+                raise ScannerError("Trivy returned an unsupported severity")
             counts[severity] += 1
             findings.append({
                 "id": vuln.get("VulnerabilityID"), "pkg": vuln.get("PkgName"),
@@ -238,10 +333,20 @@ def write_artifact(result: dict[str, Any], settings: Mapping[str, Any]) -> Path:
                        or os.environ.get("BUILD_URL", ""),
         },
     }
+    if settings.get("rescan_of"):
+        payload["rescan_of"] = settings["rescan_of"]
+    payload["scan_options"].update({"retries": settings.get("retries", 2),
+                                    "retry_backoff": settings.get("retry_backoff", 1)})
+    temporary = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
+        os.replace(temporary, path)
     except OSError as exc:
+        if temporary is not None:
+            Path(temporary).unlink(missing_ok=True)
         raise ScannerError(f"Cannot write artifact {path}: {exc}") from exc
     return path
 
@@ -259,6 +364,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", help="Trivy timeout, for example 15m")
     parser.add_argument("--output-dir", help="artifact output directory")
     parser.add_argument("--all-configured", action="store_true", help="scan every configured image")
+    parser.add_argument("--exceptions-file", help="approved exception YAML; malformed or missing files fail closed")
+    parser.add_argument("--retries", type=int, help="transient Trivy retries after the first attempt (0..5)")
+    parser.add_argument("--retry-backoff", type=float, help="initial retry delay in seconds (0..30)")
+    parser.add_argument("--rescan-artifact", help="fresh scan of the image in a previous normalized artifact")
+    parser.add_argument("--refresh-db", action="store_true", help="refresh the Trivy database before scanning")
     return parser
 
 
@@ -271,10 +381,19 @@ def run(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None)
         return 2
     blocked = False
     operational_failure = False
+    if settings["refresh_db"]:
+        try:
+            _run_trivy(["trivy", "image", "--download-db-only"], settings["retries"],
+                       settings["retry_backoff"], _timeout_seconds(settings["timeout"]))
+        except ScannerError as exc:
+            logger.error("Database refresh failed: %s", exc)
+            return 3
     for image in settings["images"]:
         try:
             result = scan_image(image, settings["severities"], settings["ignore_unfixed"],
-                                settings["pkg_types"], settings["timeout"])
+                                settings["pkg_types"], settings["timeout"],
+                                settings["retries"], settings["retry_backoff"])
+            result = apply_allowlist(result, settings["exception_policy"])
             path = write_artifact(result, settings)
             count = blocking_count(result["summary"], settings["fail_on"])
             print(json.dumps({"image": image, "summary": result["summary"],

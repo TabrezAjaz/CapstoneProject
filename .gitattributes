@@ -1,0 +1,2 @@
+docs/evidence/** -text whitespace=trailing-space,space-before-tab,cr-at-eol
+docs/evidence/**/*.pdf binary

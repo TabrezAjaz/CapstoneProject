@@ -72,6 +72,7 @@ pipeline {
                         exit 0
                     fi
                     PYTHONPATH=.ci-python python3 -m reporters.cli $artifacts --formats json,html,pdf --output-dir reports
+                    PYTHONPATH=.ci-python python3 -m dashboard.cli $artifacts --metrics-file reports/scan-metrics.prom
                 '''
             }
         }

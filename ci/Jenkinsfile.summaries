@@ -86,6 +86,7 @@ pipeline {
                     PYTHONPATH=.ci-python python3 -m reporters.cli $artifacts \
                       --period "${SUMMARY_PERIOD}" --formats json,html,pdf --output-dir reports \
                       --title "${PERIOD_TITLE} Container Vulnerability Summary"
+                                        PYTHONPATH=.ci-python python3 -m dashboard.cli $artifacts --metrics-file reports/scan-metrics.prom
                 '''
             }
         }

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sentinel | Container Security</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <script defer src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-mark"><i data-lucide="shield-check"></i></span><span>Sentinel<small>CONTAINER SECURITY</small></span></a>
+    <div class="workspace-label">WORKSPACE</div>
+    <nav aria-label="Main navigation">
+      <a class="nav-link active" href="#overview"><i data-lucide="layout-dashboard"></i> Overview</a>
+      <a class="nav-link" href="#inventory"><i data-lucide="container"></i> Image inventory</a>
+      <a class="nav-link" href="#history"><i data-lucide="history"></i> Scan history</a>
+      <a class="nav-link" href="/metrics" target="_blank" rel="noopener"><i data-lucide="activity"></i> Metrics <i class="external" data-lucide="arrow-up-right"></i></a>
+    </nav>
+    <div class="sidebar-bottom"><span class="live-dot"></span> Local workspace <span class="version">v0.4</span></div>
+  </aside>
+  <main id="overview">
+    <header class="topbar"><div class="breadcrumb">Security <span>/</span> <b>Overview</b></div><div class="connection"><span class="live-dot"></span> <span id="connection-label">Connecting</span></div></header>
+    <div class="page-content">
+      <div class="page-heading"><div><div class="eyebrow">VULNERABILITY POSTURE</div><h1>Security overview<span class="heading-dot">.</span></h1><p id="updated">No scan selected</p></div><button id="refresh" class="button" title="Refresh scan history"><i data-lucide="refresh-cw"></i><span>Refresh</span></button></div>
+      <form class="filters" id="filters">
+        <label><span>Image</span><select name="image" id="image"><option value="">All images</option></select></label>
+        <label><span>Severity</span><select name="severity" id="severity"><option value="">All severities</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option><option>UNKNOWN</option></select></label>
+        <label><span>From</span><input type="date" name="start" id="start"></label>
+        <label><span>To</span><input type="date" name="end" id="end"></label>
+        <button type="reset" class="icon-button" title="Reset filters" aria-label="Reset filters"><i data-lucide="filter-x"></i></button>
+      </form>
+      <div id="error" class="notice error" role="alert" hidden></div>
+      <div id="empty" class="empty-state" hidden><i data-lucide="scan-search"></i><h2>No scans in this view</h2><p id="empty-message">No stored scan artifacts.</p><button id="empty-reset" class="button">Clear filters</button></div>
+      <div id="results" aria-busy="true">
+        <section class="stats" aria-label="Latest scan totals">
+          <div class="stat"><div class="stat-label">Active findings <i data-lucide="layers"></i></div><strong id="stat-pending">0</strong><small>Latest scan per image</small></div>
+          <div class="stat danger"><div class="stat-label">Policy blocking <i data-lucide="shield-alert"></i></div><strong id="stat-blocking">0</strong><small id="blocked-images">0 images blocked</small></div>
+          <div class="stat good"><div class="stat-label">Resolved <i data-lucide="circle-check"></i></div><strong id="stat-resolved">0</strong><small>Since previous scan per image</small></div>
+          <div class="stat"><div class="stat-label">Approved exceptions <i data-lucide="file-check-2"></i></div><strong id="stat-suppressed">0</strong><small>Excluded from policy gate</small></div>
+        </section>
+        <section class="charts" aria-label="Vulnerability charts">
+          <div class="chart-section"><div class="section-heading"><h2>Findings over time</h2><span class="subtle">Per-image scan observations</span></div><div class="trend-wrap"><canvas id="trend" aria-label="Active finding counts over time" role="img"></canvas></div></div>
+          <div class="chart-section breakdown-section"><div class="section-heading"><h2>Severity breakdown</h2></div><div class="breakdown-content"><div class="doughnut-wrap"><canvas id="breakdown" aria-label="Latest findings by severity" role="img"></canvas></div><div id="severity-legend" class="severity-legend"></div></div></div>
+        </section>
+        <section id="inventory" class="data-section"><div class="section-heading"><h2>Image inventory <span id="image-count" class="count">0</span></h2><span class="subtle">Latest in selected range</span></div><div class="table-scroll"><table><thead><tr><th>Image</th><th>Policy</th><th>Critical</th><th>High</th><th>Active</th><th>Resolved</th><th>Last scanned</th><th><span class="sr-only">Details</span></th></tr></thead><tbody id="inventory-body"></tbody></table></div></section>
+        <section id="history" class="data-section"><div class="section-heading"><h2>Scan history</h2><div class="history-pagination"><button id="previous" class="icon-button" title="Previous page" aria-label="Previous page"><i data-lucide="chevron-left"></i></button><span id="history-count" class="subtle">0 scans</span><button id="next" class="icon-button" title="Next page" aria-label="Next page"><i data-lucide="chevron-right"></i></button></div></div><div class="table-scroll"><table><thead><tr><th>Scan</th><th>Image</th><th>Scanned at</th><th>Active</th><th>New</th><th>Resolved</th><th>Policy</th><th><span class="sr-only">Details</span></th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+      </div>
+      <footer><span>Sentinel / Capstone security operations</span><span>Trivy &middot; UTC timestamps</span></footer>
+    </div>
+  </main>
+  <dialog id="scan-dialog" aria-labelledby="detail-title">
+    <div class="dialog-header"><div><div class="eyebrow">SCAN ARTIFACT</div><h2 id="detail-title">Scan details</h2></div><button id="close-dialog" class="icon-button" aria-label="Close details" title="Close details"><i data-lucide="x"></i></button></div>
+    <p id="detail-meta" class="subtle"></p><div id="detail-summary" class="detail-summary"></div>
+    <div class="detail-actions"><label class="checkbox-label"><input id="show-suppressed" type="checkbox"> Approved exceptions only</label><button id="download" class="button" title="Download scan JSON"><i data-lucide="download"></i> JSON</button></div>
+    <div class="table-scroll detail-table"><table><thead><tr><th>Severity</th><th>Vulnerability</th><th>Package</th><th>Installed</th><th>Fixed / Exception</th></tr></thead><tbody id="detail-body"></tbody></table></div><p id="detail-limit" class="subtle"></p>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sprint 4 - Dashboard and Monitoring Report</title><style>
+:root{--ink:#24352d;--green:#147556;--muted:#64776c;--line:#dce5df}*{box-sizing:border-box;letter-spacing:0}body{margin:0;background:#f3f6f3;color:var(--ink);font:15px/1.65 'Trebuchet MS',Verdana,sans-serif}main{max-width:1120px;margin:auto;padding:45px 40px;background:#fff}header{border-bottom:4px solid var(--green);padding-bottom:25px}h1{font-size:30px;line-height:1.25}h2{font-size:22px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-top:38px}h3{font-size:17px}p,li{overflow-wrap:anywhere}code,pre{font-family:Consolas,monospace;font-size:12px}code{background:#edf4ee;padding:2px 4px}pre{padding:18px;background:#edf4ee;white-space:pre-wrap;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;font-size:13px;margin:18px 0}th,td{border:1px solid var(--line);padding:11px;text-align:left;vertical-align:top}th{background:#edf4ee}a{color:var(--green)}figure{margin:22px 0}figure img{display:block;width:100%;height:auto;border:1px solid var(--line)}figcaption{font-size:12px;color:var(--muted);padding:8px 0}.notice{padding:16px;background:#edf4ee;border-left:4px solid var(--green)}.warn{background:#fff7e2;border-color:#c8962d}.mobile img{max-width:390px;margin:auto}footer{margin-top:35px;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--muted)}@media(max-width:650px){main{padding:25px 16px}h1{font-size:25px}table{font-size:11px}th,td{padding:7px}}@media print{body{background:#fff}main{padding:0}figure{break-inside:avoid}}
+</style></head><body><main>
+<header><p>CONTAINER IMAGE VULNERABILITY SCANNER WITH REPORTING</p><h1>Sprint 4: Dashboard and Monitoring</h1><p>Tabrez Ajaz | Verified 29 October 2026 | Local, open-source deployment</p></header>
+<h2>1. Objective and Acceptance</h2>
+<p>Provide a usable historical view of image vulnerabilities, expose trustworthy metrics to Prometheus, and visualize them in Grafana. Filters must support specific images, date ranges, and severity. The dashboard must remain usable on desktop and mobile.</p>
+<table><thead><tr><th>Requirement</th><th>Implementation</th><th>Verification</th></tr></thead><tbody>
+<tr><td>Historical tracking</td><td>SQLite history with immutable scan IDs and original UTC timestamps</td><td>Persistent/idempotent imports and conflicting-ID rejection tested</td></tr>
+<tr><td>Found / resolved / pending</td><td>Exact advisory/package pair transitions and latest active counts</td><td>Equal-count/different-CVE and suppression-versus-resolution regressions</td></tr>
+<tr><td>Prometheus and Grafana</td><td>Read-only exporter, scrape configuration, datasource, eight provisioned panels</td><td>Actual target UP with empty lastError; actual Grafana values visible</td></tr>
+<tr><td>Image / date / severity filters</td><td>Custom UI controls and Grafana variables/time picker</td><td>Playwright interaction checks and API validation</td></tr>
+<tr><td>Responsive usability</td><td>Bounded chart grids, readable controls, internally scrollable tables</td><td>1440x1080 and 390x844 checks, screenshots and canvas-pixel assertions</td></tr>
+</tbody></table>
+<h2>2. Architecture</h2>
+<pre>Trivy -> schema 1.0 normalized scan artifact
+          |-> existing JSON / HTML / PDF reports
+          |-> validated, idempotent CLI importer -> SQLite history
+                                                   |-> Flask API -> Chart.js UI
+                                                   |-> /metrics -> Prometheus -> Grafana
+CI runs -> normalized scan artifacts + reports/scan-metrics.prom -> archived evidence</pre>
+<p>The scanner stays a short-lived CLI. A separate long-running history service serves metrics after the scan exits. This replaces the earlier textfile-collector proposal with a persistent read-only exporter; Node Exporter and Pushgateway are not required.</p>
+<p>CI jobs do not write to an unauthenticated public history endpoint. Download and import retained normalized artifacts into the local history store. Reimporting an unchanged scan ID does not inflate history; conflicting reuse is rejected transactionally.</p>
+<h2>3. Delivered Components</h2>
+<table><thead><tr><th>Component</th><th>Files</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>History</td><td><code>dashboard/history.py</code>, <code>dashboard/cli.py</code></td><td>Validated imports, SQLite transactions, comparisons and filters</td></tr>
+<tr><td>UI/API</td><td><code>dashboard/app.py</code>, templates and static assets</td><td>Overview, scan drilldown, audit details, JSON download, health</td></tr>
+<tr><td>Metrics</td><td><code>dashboard/metrics.py</code></td><td>One shared renderer for HTTP metrics and CI evidence exports</td></tr>
+<tr><td>Monitoring</td><td><code>dashboard/compose.yaml</code>, Prometheus rules and Grafana provisioning</td><td>Local services, retained time series, image/severity variables and staleness alerts</td></tr>
+<tr><td>Browser verification</td><td><code>dashboard/browser_check.py</code></td><td>Repeatable real-browser interactions and screenshot/canvas checks</td></tr>
+</tbody></table>
+<h2>4. Local Setup</h2>
+<pre>pip install -r requirements-dev.txt
+# PowerShell: import normalized artifacts from the scanner output directory
+$artifacts = @(Get-ChildItem scan-results -Filter '*-????????.json' | ForEach-Object FullName)
+python -m dashboard.cli @artifacts --metrics-file reports/scan-metrics.prom
+python -m dashboard.app --port 5050
+
+# Set a private non-default password in the terminal, then:
+docker compose -f dashboard/compose.yaml up -d --build</pre>
+<table><thead><tr><th>Service</th><th>Local URL</th></tr></thead><tbody>
+<tr><td>Custom dashboard</td><td><a href="http://127.0.0.1:5050">http://127.0.0.1:5050</a></td></tr>
+<tr><td>Containerized dashboard/exporter</td><td><a href="http://127.0.0.1:5051">http://127.0.0.1:5051</a></td></tr>
+<tr><td>Prometheus</td><td><a href="http://127.0.0.1:9095/targets">http://127.0.0.1:9095/targets</a></td></tr>
+<tr><td>Grafana</td><td><a href="http://127.0.0.1:3030/d/container-security">http://127.0.0.1:3030/d/container-security</a></td></tr>
+</tbody></table>
+<p>Run from the repository root. Grafana requires <code>GRAFANA_ADMIN_PASSWORD</code> in the terminal environment; no actual password is stored in this report or the repository. Loopback-only ports and anonymous Viewer access are for the local demonstration, not public production hosting.</p>
+<h2>5. Metric Definitions</h2>
+<table><thead><tr><th>Metric</th><th>Semantics</th></tr></thead><tbody>
+<tr><td><code>vulnerability_findings</code></td><td>Latest active finding count per image/severity</td></tr>
+<tr><td><code>vulnerability_blocking_findings</code></td><td>Latest active findings at/above the configured threshold</td></tr>
+<tr><td><code>vulnerability_policy_blocked</code></td><td>1 for blocked, 0 for passed</td></tr>
+<tr><td><code>vulnerability_new_findings</code></td><td>Advisory/package pairs not present in the previous scan</td></tr>
+<tr><td><code>vulnerability_resolved_findings</code></td><td>Previous pairs now absent from both active and suppressed findings</td></tr>
+<tr><td><code>vulnerability_suppressed_findings</code></td><td>Approved exceptions, never counted as remediation</td></tr>
+<tr><td><code>vulnerability_scan_timestamp_seconds</code></td><td>Actual latest scan time, independent of scrape time</td></tr>
+<tr><td><code>vulnerability_scans_stored</code></td><td>Persisted artifacts, expressed as a gauge</td></tr>
+</tbody></table>
+<div class="notice">Counts and pair transitions measure different things: two scans can both contain ten findings while one advisory/package pair disappears and another appears. The implementation detects this instead of reporting a false zero change.</div>
+<p>Found/resolved gauges describe the most recent transition per image, not cumulative events. The first observation is a baseline. An absent pair is an observation within the selected scanner scope, not independent proof of a patch. Policy blocking always reflects the full configured threshold, even if a severity display filter is selected.</p>
+<h2>6. Genuine Execution Evidence</h2>
+<p>The local history contains real scanner observations, including the original 15 October scans, fresh 29 October baseline/rescan observations, and clearly identified Sprint 5 approval/expiry demonstrations. No timestamps were invented or backfilled into Prometheus.</p>
+<figure><img src="screenshots/sprint4-dashboard-desktop.png" alt="Actual desktop security overview with two images and genuine scan history"><figcaption>Desktop custom dashboard: actual persisted observations, severity chart, image inventory and scan history.</figcaption></figure>
+<figure class="mobile"><img src="screenshots/sprint4-dashboard-mobile.png" alt="Actual 390-pixel mobile dashboard"><figcaption>Exact 390x844 browser viewport, full-page capture. Tables scroll within their own region; controls retain readable widths.</figcaption></figure>
+<figure><img src="screenshots/sprint4-grafana.png" alt="Actual Grafana vulnerability dashboard with active count 10 and blocking count 2"><figcaption>Provisioned Grafana dashboard connected to Prometheus: active 10, blocking 2, resolved 0, exceptions 0 at capture.</figcaption></figure>
+<figure><img src="screenshots/sprint4-prometheus-targets.png" alt="Actual Prometheus target health showing container-security UP"><figcaption>Actual scrape target <code>dashboard:5050/metrics</code> is UP; API inspection also verified an empty lastError.</figcaption></figure>
+<h2>7. Verification</h2>
+<pre>python -m pytest tests/test_dashboard.py -q
+python -m dashboard.browser_check --executable &lt;installed-Chrome-path&gt;</pre>
+<p>Focused dashboard tests cover persistence, idempotency, transactional rollback, exact transition comparisons, filtering, API errors, read-only routes, Prometheus parsing, local assets, metrics-file export and suppression audit semantics. The full integrated test result is recorded in the Sprint 5 report.</p>
+<p>The browser run verified API/UI totals, image and severity filters, date filtering, empty state, invalid-range error, reset, scan drilldown, readable controls, nonblank chart pixels and no page overflow on both desktop and mobile. No browser JavaScript errors were observed. The generated <a href="screenshots/sprint4-browser-check.json">browser verification JSON</a> records the actual capture time and totals.</p>
+<h2>8. Security, Retention and Limitations</h2>
+<ul><li>All published Docker ports bind to 127.0.0.1; the HTTP API has no write routes.</li><li>SQL queries are parameterized. HTML is escaped, the UI inserts scan text safely, and the Flask service sets a restrictive Content Security Policy.</li><li>SQLite history and runtime secrets are excluded from Git and Docker build contexts. The dashboard container runs as a non-root user.</li><li>Prometheus retains 15 days from the start of scraping. It cannot retroactively reconstruct old time-series samples from SQLite. SQLite history persists until deliberately removed.</li><li>Operational scan failures are not fabricated as vulnerability scans. Stale-scan and exporter-down rules show missing coverage instead.</li><li>Existing hosted CI cannot reach a laptop's loopback service. Archived normalized artifacts must be imported locally; no remote central-store deployment is claimed.</li><li>This local demonstration uses Flask's development HTTP server. A public deployment requires production WSGI hosting, authentication, TLS and operational hardening.</li></ul>
+<h2>9. Conclusion</h2><p>Sprint 4 delivers persistent historical tracking, a usable custom dashboard, real Prometheus scraping, and a provisioned Grafana view. Evidence is derived from real normalized artifacts and tested with reproducible offline and browser checks. Sprint 5 adds governed exception handling and rescan/retry hardening to the same data contract.</p>
+<footer>Container Image Vulnerability Scanner with Reporting | Sprint 4 | Tabrez Ajaz</footer>
+</main></body></html>

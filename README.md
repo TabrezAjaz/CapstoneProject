@@ -1,6 +1,18 @@
 # CapstoneProject
 Project Title: Container Image Vulnerability Scanner with Reporting
 
+## Current Delivery Status
+
+Sprint 1-3 scanning, CI gates, reports, and Jenkins Slack delivery are implemented. Sprint 4 adds
+persistent scan history, a responsive Flask/Chart.js dashboard, Prometheus metrics, and a
+provisioned Grafana dashboard. Sprint 5 adds expiring, scoped CVE exceptions with audit evidence,
+fresh rescan lineage, and fail-closed retry/error handling. The architecture discussion below preserves the original Sprint 1
+design context; see the sprint sections and reports for the implemented state.
+
+- [Sprint 3 reporting and notification evidence](docs/Sprint3_Reporting_and_Notifications_Report.html)
+- [Sprint 4 dashboard and monitoring evidence](docs/Sprint4_Dashboard_and_Monitoring_Report.html)
+- [Sprint 5 exceptions, rescan, and reliability evidence](docs/Sprint5_Exceptions_and_Reliability_Report.html)
+
 ## Architecture Overview
 
 The diagram below shows the complete system we designed for this project. We planned the
@@ -176,9 +188,12 @@ at 02:23 UTC daily and 03:41 UTC on Mondays, and can be dispatched manually with
 branch, so merge the workflow to `main` to activate the timers.
 
 For Jenkins, create two Pipeline jobs that both point to **Script Path** `ci/Jenkinsfile.summaries`
-and pass `SUMMARY_PERIOD` as `daily` and `weekly`, with UTC cron triggers `H 2 * * *` and
-`H 3 * * 1`. Each run rescans all configured images, so summaries always reflect current
-vulnerabilities; no history database or dashboard is involved (that is Sprint 4).
+with UTC cron triggers `H 2 * * *` and `H 3 * * 1`. `NOTIFY` defaults to true.
+`SUMMARY_PERIOD=auto` chooses weekly for a job name ending in `-Weekly`, otherwise daily;
+explicit `daily` and `weekly` overrides remain available. Daily #17 and weekly #5 verified the
+saved defaults, correct cadence, successful Slack delivery, and archived evidence.
+Sprint 3 reached `main` on 29 October 2026. GitHub Slack needs its own `SLACK_WEBHOOK_URL` secret;
+the Jenkins credential does not configure GitHub.
 
 ### Failure precedence
 
@@ -192,4 +207,157 @@ treat a policy block as a valid summary result and fail only on operational erro
 Reports and notifications add no paid services: Jinja2 and ReportLab run locally, Slack's incoming
 webhooks are free on the current plan, and Trivy, GitHub-hosted runners, and the academic Jenkins
 controller are already in use.
+
+## Sprint 4 - Dashboard and Monitoring
+
+### Persistent history and local dashboard
+
+Run all commands from the repository root. Import normalized scanner artifacts, not report JSON
+or raw Trivy output. Repeated imports of the same scan ID are idempotent; conflicting reuse of a
+scan ID fails the whole import transaction. New observations of an image remain separate scans.
+
+```powershell
+pip install -r requirements-dev.txt
+$artifacts = @(Get-ChildItem scan-results -Filter '*-????????.json' | ForEach-Object FullName)
+python -m dashboard.cli @artifacts --metrics-file reports/scan-metrics.prom
+python -m dashboard.app --port 5050
+```
+
+Open http://127.0.0.1:5050. The UI provides image/severity/date filters, historical observations,
+per-image policy state, scan drilldowns, approved-exception details, and JSON downloads.
+The API is read-only: `/api/overview`, `/api/scans/<scan_id>`, `/healthz`, and `/metrics`.
+SQLite history defaults to `dashboard/data/history.sqlite3`, which is excluded from Git and Docker
+build contexts. Use `--database` on both importer and server to select another database.
+
+For an existing CI build, download its normalized scan artifacts and import them locally.
+CI archives `reports/scan-metrics.prom`; its temporary database is not a central history store.
+The local history importer is intentionally a CLI, not an unauthenticated remote write endpoint.
+
+### Prometheus and Grafana
+
+```powershell
+# Set a private, non-default password directly in your terminal; never commit it.
+$env:GRAFANA_ADMIN_PASSWORD = '<your-private-password>'
+docker compose -f dashboard/compose.yaml up -d --build
+```
+
+- Containerized dashboard: http://127.0.0.1:5051
+- Prometheus target health: http://127.0.0.1:9095/targets
+- Grafana: http://127.0.0.1:3030/d/container-security
+
+Prometheus scrapes the persistent exporter every 15 seconds and retains 15 days of scrape history.
+Grafana provisions its Prometheus datasource and eight panels automatically, with image/severity
+variables and a UTC time picker. It permits anonymous **Viewer** access only; published ports
+bind to loopback. Administrative login uses your environment password. Both monitoring services
+use named volumes; do not use `down -v` unless you intend to delete their history.
+This is a local demonstration deployment, not an authenticated public production service.
+
+### Metric Semantics
+
+| Metric | Meaning |
+|---|---|
+| `vulnerability_findings{image,severity}` | Active latest-scan finding counts |
+| `vulnerability_blocking_findings{image}` | Active findings at/above the policy threshold |
+| `vulnerability_policy_blocked{image}` | 1 blocked, 0 passed |
+| `vulnerability_new_findings{image}` | New advisory/package pairs compared with the previous scan |
+| `vulnerability_resolved_findings{image}` | Previous advisory/package pairs now absent |
+| `vulnerability_suppressed_findings{image}` | Approved exceptions, separately visible |
+| `vulnerability_scan_timestamp_seconds{image}` | Latest actual scan time, for staleness alerts |
+| `vulnerability_scans_stored` | Persisted artifact count, a gauge rather than a process counter |
+
+New/resolved values are gauges for the latest scan transition, not cumulative event counters.
+The first observation is a baseline: all observed pairs are new and none are resolved.
+Suppressing a vulnerability is not remediation: comparisons include active plus suppressed pairs.
+An absent vulnerability is an observation within the configured Trivy scope, not proof that a
+patch was installed. Date filters choose observations in that range and use the prior stored
+observation as a comparison baseline. Pending is the latest active finding count per image.
+Policy-blocking totals always use the full configured gate, even under a severity display filter.
+
+SQLite preserves original scan timestamps. Prometheus starts history when it begins scraping;
+it does not backfill old SQLite scans. No historical data or remediation is fabricated.
+
+### Verification
+
+```powershell
+python -m pytest -q
+# Install Chromium once, or pass --executable with an installed Chrome path.
+python -m playwright install chromium
+python -m dashboard.browser_check
+```
+
+The browser check validates API/UI totals, filters, empty/error states, scan details, readable
+controls, no page overflow, and nonblank chart pixels at 1440x1080 and 390x844. It saves genuine
+screenshots and a JSON verification record under `docs/screenshots`.
+An optional `--audit-scan-id` captures an existing approved-exception audit view.
+
+## Sprint 5 - Exceptions, Rescans and Reliability
+
+The scanner applies `exceptions_file` before calculating active severity counts and the policy
+gate. The committed production allowlist is deliberately empty. Each approval requires an exact
+advisory `id`, a non-empty `reason`, and an expiry in `YYYY-MM-DD` format; optional `image` and
+`pkg` values restrict it to exact scopes. Wildcards, duplicate scopes, malformed fields and missing
+configured files fail closed with exit `2` before Trivy starts.
+
+```yaml
+exceptions:
+  - id: CVE-2026-40200
+    image: alpine:3.19
+    pkg: musl
+    reason: "Example only: temporary reviewed risk acceptance"
+    expires: 2026-10-30
+```
+
+Expiry is inclusive through that UTC calendar date. Expired entries remain visible in audit
+metadata but do not suppress findings. Matching uses the first non-expired rule with the exact ID
+and matching optional scopes. Configuration precedence remains CLI > environment > YAML > defaults.
+A YAML `exceptions_file` path is relative to that YAML file; CLI/environment paths are relative to
+the working directory. The reference `.env.example` is not automatically loaded by the application.
+
+Schema `1.0` gains additive `raw_summary`, `suppressed_findings`, `exception_policy`, and optional
+`rescan_of` fields. Active findings determine the gate; suppressed findings retain package/version,
+reason and expiry. The exception file SHA-256 and evaluation date are recorded. JSON, HTML, PDF
+and the dashboard expose approved exceptions separately. The report loader rejects inconsistent
+active counts, forged policy states, and broken suppression-count audits.
+Trivy's implicit `.trivyignore` file is disabled so it cannot bypass the audited approval policy.
+
+### Fresh Rescans
+
+```powershell
+python -m scanner.trivy_scanner alpine:3.19 --refresh-db --output-dir scan-results/baseline
+python -m scanner.trivy_scanner --rescan-artifact scan-results/baseline/alpine_3.19-6bd2275d.json `
+  --output-dir scan-results/rescan
+```
+
+Every rescan actually invokes Trivy, creates a new UUID/UTC timestamp, and records the previous
+scan ID as `rescan_of`. It does not replay old findings. Use separate output directories and import
+both observations to preserve history. Daily/weekly jobs already refresh the database and rescan
+all configured images; no automatic image-digest watcher is claimed.
+
+### Bounded Retries and Failures
+
+Default: two retries after the first attempt, with 1s then 2s backoff, capped at 30s. Configure
+`--retries` / `SCANNER_RETRIES` (0..5) and `--retry-backoff` / `SCANNER_RETRY_BACKOFF` (0..30s).
+Only recognized transient network/registry failures and process timeouts are retried. Missing
+executables, invalid JSON, authentication/authorization failures, missing manifests and permanent
+errors fail immediately. A process deadline bounds each attempt to the configured Trivy timeout
+plus 30 seconds; enclosing CI timeouts remain an additional bound. `--refresh-db` uses the same
+classified retry helper. Vulnerability policy failures are never retried as operational errors.
+
+Exit codes remain 0 pass, 1 policy block, 2 configuration, 3 operational failure. Malformed Trivy
+result shapes cannot become clean scans. Artifacts are written with atomic replacement; a failed
+write does not produce a partial successful-looking JSON file.
+
+### Evidence and Demonstrations
+
+`tests/fixtures/allowlist-alpine-demo.yaml` is explicitly non-production and date-specific.
+On 29 October 2026, its temporary rule produced 8 active / 2 suppressed findings and exit 0.
+The expired fixture restored 10 active / 0 suppressed findings and exit 1. A missing policy
+returned exit 2 without scanning. The normal allowlist remains empty.
+
+The full integrated suite has 77 deterministic passing tests, and exact desktop/mobile browser
+checks passed. Small public Alpine demonstration artifacts, generated reports and JUnit evidence
+are intentionally archived under `docs/evidence/sprint5`; production inventories, credentials,
+runtime history databases and secrets are not committed. Real scan counts are date/database
+specific; deterministic tests use fixtures. Transient retries were verified by controlled unit
+tests, not by claiming an unperformed live network fault injection.
 
