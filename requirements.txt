@@ -1,0 +1,8 @@
+# Python dependencies for the Container Image Vulnerability Scanner
+#
+# NOTE: Trivy itself is an external binary (installed separately — see the
+# Sprint 1 report). These packages are only for the Python wrapper.
+
+PyYAML>=6.0        # read config.yaml
+Jinja2>=3.1,<4.0   # autoescaped HTML reports
+reportlab>=4.2,<5.0 # local PDF reports

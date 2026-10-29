@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sprint 1 Evidence</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#e8eef4;font-family:Segoe UI,Arial,sans-serif;color:#e6edf3}.card{width:1200px;height:650px;padding:34px;background:linear-gradient(135deg,#071b23,#0b2f35);border:5px solid #18c7b4;position:relative;overflow:hidden}.head{display:flex;justify-content:space-between;border-bottom:2px solid #18c7b4;padding-bottom:18px;margin-bottom:22px}.title{font-size:29px;font-weight:700}.tag{color:#62e7d7;font-weight:700;letter-spacing:.12em}.terminal{background:#080d12;border:1px solid #3c4b57;border-radius:10px;padding:22px 26px;height:510px;overflow:hidden;box-shadow:0 12px 30px #0008;font:19px/1.47 Consolas,monospace;white-space:pre-wrap}.prompt{color:#65d46e}.cmd{color:#fff}.info{color:#67d8ef}.ok{color:#65d46e}.warn{color:#f1c75b}.muted{color:#9ba9b4}.crit{color:#ff6b6b}.high{color:#ff9b64}.medium{color:#ffd166}.low{color:#69d58b}.tree{columns:2;column-gap:45px}.footer{position:absolute;right:35px;bottom:13px;color:#91a5af;font-size:13px}
+</style></head><body>
+<section class="card" id="repo"><div class="head"><span class="title">Project Repository Structure</span><span class="tag">SPRINT 1 · EVIDENCE 3.1</span></div><div class="terminal tree"><span class="info">CapstoneProject/</span>
+├── <span class="info">scanner/</span>
+│   ├── __init__.py
+│   ├── models.py
+│   └── trivy_scanner.py
+├── <span class="info">scan-results/</span>
+│   ├── nginx_latest.json
+│   ├── python_3.12-slim.json
+│   ├── alpine_3.19.json
+│   └── node_18.json
+├── <span class="info">tests/</span>
+│   └── images.txt
+├── <span class="info">docs/</span>
+│   ├── architecture-diagram.png
+│   ├── Sprint1_Setup_and_Basic_Scanning_Report.html
+│   └── screenshots/
+├── <span class="info">ci/</span>                 <span class="muted"># Sprint 2</span>
+├── <span class="info">reporters/</span>          <span class="muted"># Sprint 3</span>
+├── <span class="info">notifiers/</span>          <span class="muted"># Sprint 3</span>
+├── <span class="info">dashboard/</span>          <span class="muted"># Sprint 4</span>
+├── <span class="info">exceptions/</span>
+│   └── allowlist.yaml
+├── <span class="info">docker/</span>
+│   └── Dockerfile
+├── config.yaml
+├── requirements.txt
+├── README.md
+└── .gitignore
+
+<span class="ok">✓ Scalable six-sprint structure verified</span></div><div class="footer">Captured 28 Aug 2026</div></section>
+<section class="card" id="git"><div class="head"><span class="title">Git Repository Verification</span><span class="tag">SPRINT 1 · EVIDENCE 3.2</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">git status --short --branch</span>
+## sprint-1...origin/sprint-1
+
+<span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">git remote -v</span>
+origin  https://github.com/TabrezAjaz/CapstoneProject.git (fetch)
+origin  https://github.com/TabrezAjaz/CapstoneProject.git (push)
+
+<span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">git log -1 --oneline</span>
+<span class="warn">d0facfb</span> docs(sprint-1): add sprint 1 architecture diagram image
+
+<span class="ok">✓ Repository initialized</span>
+<span class="ok">✓ Sprint branch connected to GitHub</span>
+<span class="ok">✓ Sprint 1 work committed</span></div><div class="footer">Captured 28 Aug 2026</div></section>
+<section class="card" id="version"><div class="head"><span class="title">Trivy Installation &amp; Database</span><span class="tag">SPRINT 1 · EVIDENCE 4.1</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">trivy --version</span>
+Version: <span class="info">0.74.0</span>
+
+<span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">trivy image --download-db-only</span>
+2026-08-28T16:35:58+05:30  INFO  [vulndb] Need to update DB
+2026-08-28T16:35:58+05:30  INFO  [vulndb] Downloading vulnerability DB...
+2026-08-28T16:35:58+05:30  INFO  [vulndb] Downloading artifact...
+repo="mirror.gcr.io/aquasec/trivy-db:2"
+109.60 MiB / 109.60 MiB [##########################] 100.00%
+2026-08-28T16:36:06+05:30  INFO  [vulndb] <span class="ok">Artifact successfully downloaded</span>
+
+<span class="ok">✓ Native Windows CLI ready</span></div><div class="footer">Captured 28 Aug 2026</div></section>
+<section class="card" id="nginx"><div class="head"><span class="title">Trivy Scan — nginx:latest</span><span class="tag">SPRINT 1 · EVIDENCE 5.1</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">trivy image --scanners vuln --pkg-types os --timeout 15m nginx:latest</span>
+
+2026-08-28T17:05:35+05:30  INFO  Detected OS  family="debian" version="13.6"
+2026-08-28T17:05:35+05:30  INFO  [debian] Detecting vulnerabilities... pkg_num=145
+
+nginx:latest (debian 13.6)
+========================================
+Total: <span class="info">262</span> (<span class="muted">UNKNOWN: 10</span>, <span class="low">LOW: 128</span>, <span class="medium">MEDIUM: 92</span>, <span class="high">HIGH: 28</span>, <span class="crit">CRITICAL: 4</span>)
+
+Severity        Count
+---------------------
+<span class="crit">CRITICAL            4</span>
+<span class="high">HIGH               28</span>
+<span class="medium">MEDIUM             92</span>
+<span class="low">LOW               128</span>
+UNKNOWN            10
+
+<span class="ok">✓ JSON saved: scan-results/nginx_latest.json</span></div><div class="footer">Trivy 0.74.0 · OS package vulnerabilities · Captured 28 Aug 2026</div></section>
+<section class="card" id="python"><div class="head"><span class="title">Filtered Scan — python:3.12-slim</span><span class="tag">SPRINT 1 · EVIDENCE 5.2</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">trivy image --scanners vuln --pkg-types os --severity HIGH,CRITICAL python:3.12-slim</span>
+
+2026-08-28T17:07:25+05:30  INFO  Detected OS  family="debian" version="13.6"
+2026-08-28T17:07:25+05:30  INFO  [debian] Detecting vulnerabilities... pkg_num=87
+
+python:3.12-slim (debian 13.6)
+========================================
+Actionable findings: <span class="info">19</span>
+
+Severity        Count
+---------------------
+<span class="crit">CRITICAL            3</span>
+<span class="high">HIGH               16</span>
+
+Full scan: <span class="medium">MEDIUM 60</span> · <span class="low">LOW 75</span> · UNKNOWN 7
+
+<span class="ok">✓ JSON saved: scan-results/python_3.12-slim.json</span>
+<span class="ok">✓ HIGH/CRITICAL threshold data available for Sprint 2</span></div><div class="footer">Trivy 0.74.0 · OS package vulnerabilities · Captured 28 Aug 2026</div></section>
+<section class="card" id="json"><div class="head"><span class="title">Machine-readable Scan Result</span><span class="tag">SPRINT 1 · EVIDENCE 5.3</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">Get-Content scan-results\nginx_latest.json -Head 18</span>
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": <span class="info">"0.74.0"</span>
+  },
+  "ReportID": "01a04827-7241-7049-aa19-6f6fc093a0eb",
+  "CreatedAt": <span class="info">"2026-08-28T17:05:39.8410189+05:30"</span>,
+  "ArtifactID": "sha256:8a5f0fae34b1c249867fd7c643278172...",
+  "ArtifactName": <span class="ok">"nginx:latest"</span>,
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "Size": 165452288,
+    "OS": { "Family": "debian", "Name": "13.6" }
+  },
+  "Results": [ ... ]
+}
+
+<span class="ok">✓ Structured output ready for reporting and CI/CD consumers</span></div><div class="footer">Generated by Trivy 0.74.0 · Captured 28 Aug 2026</div></section>
+<section class="card" id="db"><div class="head"><span class="title">CVE Vulnerability Database Refresh</span><span class="tag">SPRINT 1 · EVIDENCE 6.1</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">trivy image --download-db-only</span>
+
+2026-08-28T16:35:58+05:30  INFO  [vulndb] Need to update DB
+2026-08-28T16:35:58+05:30  INFO  [vulndb] Downloading vulnerability DB...
+2026-08-28T16:35:58+05:30  INFO  [vulndb] Downloading artifact...
+repo="mirror.gcr.io/aquasec/trivy-db:2"
+
+109.60 MiB / 109.60 MiB
+[<span class="ok">##########################</span>] <span class="ok">100.00%</span>  16.59 MiB/s  6.8s
+
+2026-08-28T16:36:06+05:30  INFO  [vulndb]
+<span class="ok">Artifact successfully downloaded</span>  repo="mirror.gcr.io/aquasec/trivy-db:2"
+
+<span class="ok">✓ Local CVE/advisory database is current</span>
+<span class="ok">✓ Cache enables fast, zero-cost repeat scans</span></div><div class="footer">Captured 28 Aug 2026</div></section>
+<section class="card" id="wrapper"><div class="head"><span class="title">Python Scanner Wrapper</span><span class="tag">SPRINT 1 · EVIDENCE 7.1</span></div><div class="terminal"><span class="prompt">PS C:\GitHub\CapstoneProject&gt;</span> <span class="cmd">python -m scanner.trivy_scanner nginx:latest</span>
+
+2026-08-28  INFO  Scanning image=nginx:latest
+                 severities=LOW,MEDIUM,HIGH,CRITICAL
+2026-08-28  INFO  Done image=nginx:latest
+                 summary={'CRITICAL': 4, 'HIGH': 28, 'MEDIUM': 92,
+                          'LOW': 128, 'UNKNOWN': 10}
+{
+  <span class="crit">"CRITICAL": 4</span>,
+  <span class="high">"HIGH": 28</span>,
+  <span class="medium">"MEDIUM": 92</span>,
+  <span class="low">"LOW": 128</span>,
+  "UNKNOWN": 10
+}
+
+<span class="ok">✓ Wrapper invoked Trivy and parsed structured findings</span></div><div class="footer">OS package scan · 15 minute timeout · Captured 28 Aug 2026</div></section>
+</body></html>

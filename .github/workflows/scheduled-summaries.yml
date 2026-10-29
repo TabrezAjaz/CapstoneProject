@@ -1,0 +1,87 @@
+name: Scheduled vulnerability summaries
+
+on:
+  schedule:
+    - cron: '23 2 * * *'
+    - cron: '41 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      period:
+        description: Summary period
+        type: choice
+        options: [daily, weekly]
+        default: daily
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vulnerability-summary-${{ github.event.schedule || inputs.period }}
+  cancel-in-progress: false
+
+env:
+  TRIVY_VERSION: v0.74.0
+  SCANNER_OUTPUT_DIR: scan-results
+  REPORT_OUTPUT_DIR: reports
+  PERIOD: ${{ inputs.period || (github.event.schedule == '41 3 * * 1' && 'weekly' || 'daily') }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          cache: true
+      - run: trivy image --download-db-only
+      - name: Scan configured images
+        id: scan
+        run: |
+          set +e
+          python -m scanner.trivy_scanner --all-configured
+          code=$?
+          echo "Scanner exit code: $code"
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Generate summary reports
+        if: always()
+        run: |
+          shopt -s nullglob
+          artifacts=(scan-results/*-????????.json)
+          if [ ${#artifacts[@]} -eq 0 ]; then
+            echo "No normalized scan artifacts found; summary generation skipped."
+            exit 0
+          fi
+          python -m reporters.cli "${artifacts[@]}" --period "$PERIOD" --formats json,html,pdf \
+            --output-dir reports --title "${PERIOD^} Container Vulnerability Summary"
+      - name: Send Slack summary
+        if: always() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          shopt -s nullglob
+          reports=(reports/*.json)
+          if [ ${#reports[@]} -eq 0 ]; then
+            echo "No report found; Slack summary skipped."
+            exit 0
+          fi
+          mapfile -t canonical < <(printf '%s\n' "${reports[@]}" | grep -v '\.manifest\.json$')
+          python -m notifiers.cli "${canonical[0]}" --always
+      - name: Upload summary evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: vulnerability-${{ env.PERIOD }}-${{ github.run_number }}
+          path: |
+            scan-results/*.json
+            reports/*
+          retention-days: 30
+      - name: Restore scan result
+        if: always() && steps.scan.outputs.exit_code != '0' && steps.scan.outputs.exit_code != '1' && steps.scan.outputs.exit_code != ''
+        run: exit "${{ steps.scan.outputs.exit_code }}"

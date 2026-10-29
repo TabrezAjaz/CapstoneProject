@@ -62,3 +62,134 @@ These are the parts we will connect the scan results to in the upcoming sprints:
 - **Standards-based** — every finding maps back to an official **CVE/NVD** identifier with a CVSS
   score, so our severities follow the industry standard rather than anything we invented.
 
+## Sprint 2 — CI/CD vulnerability gate
+
+Sprint 2 adds one policy-aware Python CLI shared by GitHub Actions and Jenkins. Every successful
+scan writes normalized JSON evidence and evaluates `scanner.fail_on` from `config.yaml`. With the
+default `HIGH` policy, HIGH and CRITICAL findings block the build.
+
+### Local usage
+
+```powershell
+pip install -r requirements-dev.txt
+pytest -q
+python -m scanner.trivy_scanner alpine:3.19
+python -m scanner.trivy_scanner node:18 --fail-on HIGH
+python -m scanner.trivy_scanner --all-configured
+```
+
+| Exit | Meaning |
+|---:|---|
+| 0 | Scan completed and policy passed |
+| 1 | Scan completed and policy blocked the image |
+| 2 | CLI or configuration is invalid |
+| 3 | Trivy, registry, timeout, parsing, or artifact failure |
+
+Configuration precedence is **CLI option > environment variable > YAML > code default**. See
+`.env.example` for `SCAN_IMAGE`, `SCANNER_FAIL_ON`, `SCANNER_SEVERITIES`,
+`SCANNER_IGNORE_UNFIXED`, `SCANNER_PKG_TYPES`, `SCANNER_TIMEOUT`, and `SCANNER_OUTPUT_DIR`.
+
+### GitHub Actions
+
+`.github/workflows/container-scan.yml` runs on pushes, pull requests, manual dispatches, and
+reusable workflow calls. It installs pinned Trivy 0.74.0, refreshes its database, runs tests,
+applies the gate, and uploads JSON/JUnit evidence even when policy blocks the build. Repository
+variables `SCAN_IMAGE` and `SCANNER_FAIL_ON` can override defaults.
+The automatic smoke test uses `hello-world:latest` for a green no-package path; run the workflow
+with `alpine:3.19` and `HIGH` to demonstrate an intentional policy block.
+
+### Jenkins
+
+Create a Pipeline job for this repository with **Script Path** `ci/Jenkinsfile`. The pipeline uses
+a Linux agent with Python 3, downloads pinned Trivy 0.74.0 without sudo, and installs Python
+packages into the workspace without requiring `python3-venv`. Parameters select the image and
+policy threshold; JSON and JUnit evidence is retained for both green and blocked builds.
+
+Do not put registry credentials in configuration files or image references. Use masked provider
+credentials for private registries. Registry-reference scans do not require the Docker socket.
+
+## Sprint 3 — Reports and notifications
+
+Sprint 3 turns scan output into shareable evidence and real-time alerts. One canonical report
+model feeds three renderers, and the same notifier is shared by GitHub Actions and Jenkins.
+
+```mermaid
+flowchart LR
+    A[Trivy scan] --> B[Schema 1.0 scan artifact]
+    B --> C[Strict loader and validation]
+    C --> D[Canonical report model]
+    D --> E[JSON]
+    D --> F[HTML]
+    D --> G[PDF]
+    D --> H[Slack alert]
+    E --> I[SHA-256 manifest]
+    F --> I
+    G --> I
+```
+
+### Scan artifact schema 1.0
+
+Every scanner run writes a versioned artifact containing `schema_version`, `scan_id`,
+`scanned_at` (UTC), `image`, a five-key severity `summary`, normalized `findings`, `policy`,
+`scan_options`, `scanner` versions, and sanitized `source` metadata. The report loader rejects raw
+Trivy output, legacy files, and any artifact whose summary does not match its findings. See
+[docs/SPRINT3_REPORT_SCHEMA.md](docs/SPRINT3_REPORT_SCHEMA.md).
+
+### Generating reports
+
+```powershell
+# one image: run report
+python -m scanner.trivy_scanner alpine:3.19
+python -m reporters.cli scan-results/alpine_3.19-*.json --period run --formats json,html,pdf
+
+# portfolio summary across several artifacts
+python -m reporters.cli scan-results/*-????????.json --period daily --formats json,html,pdf `
+  --output-dir reports --title "Daily Container Vulnerability Summary"
+```
+
+Reports exit `0` on success, `2` for invalid input or configuration, and `3` for rendering or I/O
+failure. A `<name>.manifest.json` file is written last and records each output's media type, size,
+and SHA-256 checksum.
+
+### Slack alerts
+
+```powershell
+$env:SLACK_WEBHOOK_URL = "<incoming webhook>"   # never store this in a file
+python -m notifiers.cli reports/vulnerability-daily-*.json --always
+```
+
+- Delivery uses `SLACK_WEBHOOK_URL` from the environment or a CI credential binding only.
+- The URL must be an HTTPS `hooks.slack.com` (or `hooks.slack-gov.com`) `/services/...` webhook.
+  Credentials in the URL, fragments, redirects, and non-443 ports are refused.
+- `notifications.alert_on` in `config.yaml` (default `HIGH`) controls immediate run alerts.
+  CRITICAL is urgent/red, HIGH is action-required/orange, MEDIUM warning/yellow, and LOW
+  informational/blue. Daily and weekly summaries are always sent.
+- Failures are retried at most three times with bounded backoff for timeouts, `408`, `425`, `429`,
+  and `5xx`. Other `4xx` responses are not retried. Notifier exit `3` means delivery was exhausted.
+- Scan-controlled values are truncated and `@channel`/`@here` mentions are stripped.
+
+### Scheduling
+
+`.github/workflows/scheduled-summaries.yml` performs a fresh scan of every image in `config.yaml`
+at 02:23 UTC daily and 03:41 UTC on Mondays, and can be dispatched manually with `daily` or
+`weekly`. GitHub only evaluates `schedule` and `workflow_dispatch` from the repository's default
+branch, so merge the workflow to `main` to activate the timers.
+
+For Jenkins, create two Pipeline jobs that both point to **Script Path** `ci/Jenkinsfile.summaries`
+and pass `SUMMARY_PERIOD` as `daily` and `weekly`, with UTC cron triggers `H 2 * * *` and
+`H 3 * * 1`. Each run rescans all configured images, so summaries always reflect current
+vulnerabilities; no history database or dashboard is involved (that is Sprint 4).
+
+### Failure precedence
+
+Scanning, reporting, and notification all run so evidence is never lost. The scanner exit code
+still decides the gate: a blocked image keeps the build red even when reporting and Slack delivery
+succeed. Report and exhausted-delivery failures are operational failures. Scheduled summary jobs
+treat a policy block as a valid summary result and fail only on operational errors.
+
+### Cost
+
+Reports and notifications add no paid services: Jinja2 and ReportLab run locally, Slack's incoming
+webhooks are free on the current plan, and Trivy, GitHub-hosted runners, and the academic Jenkins
+controller are already in use.
+

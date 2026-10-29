@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds(abortPrevious: true)
+    }
+
+    parameters {
+        string(name: 'SCAN_IMAGE', defaultValue: 'alpine:3.19', description: 'Container image reference')
+        choice(name: 'SCANNER_FAIL_ON', choices: ['HIGH', 'CRITICAL', 'MEDIUM', 'LOW'], description: 'Minimum blocking severity')
+        booleanParam(name: 'NOTIFY', defaultValue: false, description: 'Send the vulnerability summary to Slack using the slack-webhook-url credential')
+    }
+
+    environment {
+        TRIVY_VERSION = '0.74.0'
+        SCANNER_OUTPUT_DIR = 'scan-results'
+        SCANNER_TIMEOUT = '15m'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Environment') {
+            steps {
+                sh '''
+                    rm -rf .ci-python .tools
+                    mkdir -p .ci-python .tools
+                    python3 -m pip install --disable-pip-version-check --target .ci-python -r requirements-dev.txt
+                    curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+                      | tar -xz -C .tools trivy
+                    .tools/trivy --version
+                '''
+            }
+        }
+
+        stage('Refresh vulnerability DB') {
+            steps {
+                retry(2) {
+                    sh '.tools/trivy image --download-db-only'
+                }
+            }
+        }
+
+        stage('Tests') {
+            steps {
+                sh 'PYTHONPATH=.ci-python python3 -m pytest -q --junitxml=test-results/junit.xml'
+            }
+        }
+
+        stage('Vulnerability Gate') {
+            steps {
+                script {
+                    env.SCAN_EXIT = sh(
+                        script: 'PATH="$WORKSPACE/.tools:$PATH" PYTHONPATH=.ci-python python3 -m scanner.trivy_scanner "$SCAN_IMAGE"',
+                        returnStatus: true
+                    ).toString()
+                }
+            }
+        }
+
+        stage('Generate Reports') {
+            when { expression { fileExists('scan-results') } }
+            steps {
+                sh '''
+                    artifacts=$(ls scan-results/*-????????.json 2>/dev/null || true)
+                    if [ -z "$artifacts" ]; then
+                        echo "No normalized scan artifacts found; report generation skipped."
+                        exit 0
+                    fi
+                    PYTHONPATH=.ci-python python3 -m reporters.cli $artifacts --formats json,html,pdf --output-dir reports
+                '''
+            }
+        }
+
+        stage('Notify Slack') {
+            when { expression { return params.NOTIFY } }
+            steps {
+                withCredentials([string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')]) {
+                    sh '''
+                        canonical=$(ls reports/*.json 2>/dev/null | grep -v '\\.manifest\\.json$' | head -n 1 || true)
+                        if [ -z "$canonical" ]; then
+                            echo "No canonical report found; Slack notification skipped."
+                            exit 0
+                        fi
+                        PYTHONPATH=.ci-python python3 -m notifiers.cli "$canonical"
+                    '''
+                }
+            }
+        }
+
+        stage('Enforce Gate Result') {
+            steps {
+                script {
+                    if (env.SCAN_EXIT != '0') {
+                        error("Vulnerability gate exited with code ${env.SCAN_EXIT}")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'scan-results/*.json', fingerprint: true
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/*', fingerprint: true
+        }
+        cleanup {
+            deleteDir()
+        }
+    }
+}
