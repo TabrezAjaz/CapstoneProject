@@ -177,8 +177,83 @@ ul{margin:10px 0 10px 0}
 <figure><img src="screenshots/sprint3-jenkins-schedule.png" alt="Jenkins summary job cron schedules in UTC"><figcaption>Figure 11.6 — Cadence configuration: <code>H 2 * * *</code> daily and <code>H 3 * * 1</code> weekly with the next run reported in Coordinated Universal Time.</figcaption></figure>
 
 <h2>12. Slack Delivery</h2>
-<figure><img src="screenshots/sprint3-slack-alert.png" alt="Slack alert for a high severity vulnerability report"><figcaption>Figure 12.1 — Immediate HIGH alert delivered to the security channel.</figcaption></figure>
-<figure><img src="screenshots/sprint3-slack-summary.png" alt="Slack daily and weekly summary messages"><figcaption>Figure 12.2 — Daily and weekly portfolio summaries with per-image severity counts.</figcaption></figure>
+<p>Live delivery was verified on 29 October 2026 using the Jenkins Secret Text credential <code>slack-webhook-url</code>. No webhook value is included in this report or repository.</p>
+<table>
+<thead><tr><th>Case</th><th>Verified evidence</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>HIGH alert: <code>alpine:3.19</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/">Main build #4</a>: 2 HIGH findings; <code>Slack notification delivered in 1 attempt(s)</code>; 28 tests passed; five artifacts archived.</td><td>Delivered; build intentionally blocked by policy.</td></tr>
+<tr><td>CRITICAL alert: <code>node:18</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/">Main build #5</a>: <code>Slack notification delivered in 1 attempt(s)</code>; JSON, HTML, PDF, manifest, and scan artifact archived.</td><td>Delivered; build intentionally blocked by policy.</td></tr>
+<tr><td>Daily summary</td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/16/">Daily build #16</a>: four fresh scan artifacts and four report files archived; <code>Slack notification delivered in 1 attempt(s)</code>.</td><td>SUCCESS; notification enabled for this manual run.</td></tr>
+<tr><td>Weekly summary</td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/">Weekly build #4</a>: four fresh scan artifacts and four report files archived; <code>Slack notification delivered in 1 attempt(s)</code>.</td><td>SUCCESS; weekly period and notification explicitly selected for this manual run.</td></tr>
+</tbody></table>
+<h3>12.1 HIGH alert: original console evidence</h3>
+<p>Source: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/console">main build #4 console</a>. Selected original lines, in source order; omitted lines are not reproduced. UTC timestamps below come from Jenkins, not a reconstructed terminal screenshot.</p>
+<pre>[2026-10-29T06:37:53.473Z] 28 passed in 0.52s
+[2026-10-29T06:37:55.808Z] 2026-10-29 06:37:55,716 INFO Done image=alpine:3.19 summary={'CRITICAL': 0, 'HIGH': 2, 'MEDIUM': 5, 'LOW': 3, 'UNKNOWN': 0}
+[2026-10-29T06:37:55.808Z] 2026-10-29 06:37:55,717 ERROR POLICY BLOCKED image=alpine:3.19 blocking_findings=2
+[2026-10-29T06:37:56.801Z] Masking supported pattern matches of $SLACK_WEBHOOK_URL
+[2026-10-29T06:37:57.366Z] Slack notification delivered in 1 attempt(s)
+[2026-10-29T06:37:58.034Z] Archiving artifacts
+[2026-10-29T06:37:58.094Z] Archiving artifacts
+ERROR: Vulnerability gate exited with code 1
+Finished: FAILURE</pre>
+<p><strong>Interpretation:</strong> two HIGH findings intentionally block deployment. Successful Slack delivery and artifact archiving precede the final policy failure. Five files remain archived.</p>
+
+<h3>12.2 CRITICAL alert: original console evidence</h3>
+<p>Source: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/console">main build #5 console</a>. Selected original lines, in source order.</p>
+<pre>[2026-10-29T06:38:35.878Z] 28 passed in 0.34s
+[2026-10-29T06:38:42.752Z] 2026-10-29 06:38:41,499 INFO Done image=node:18 summary={'CRITICAL': 228, 'HIGH': 2188, 'MEDIUM': 6712, 'LOW': 2754, 'UNKNOWN': 0}
+[2026-10-29T06:38:42.752Z] 2026-10-29 06:38:41,599 ERROR POLICY BLOCKED image=node:18 blocking_findings=2416
+[2026-10-29T06:38:55.516Z] Masking supported pattern matches of $SLACK_WEBHOOK_URL
+[2026-10-29T06:38:56.071Z] Slack notification delivered in 1 attempt(s)
+[2026-10-29T06:38:56.560Z] Archiving artifacts
+[2026-10-29T06:38:56.615Z] Archiving artifacts
+ERROR: Vulnerability gate exited with code 1
+Finished: FAILURE</pre>
+<p><strong>Interpretation:</strong> 228 CRITICAL and 2,188 HIGH findings produce 2,416 blocking findings. Delivery succeeded; FAILURE is the expected gate result, not a notification failure. Five files remain archived.</p>
+
+<h3>12.3 Daily summary: original console evidence</h3>
+<p>Source: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/16/console">daily build #16 console</a>. Manual parameters: <code>SUMMARY_PERIOD=daily</code>, <code>NOTIFY=true</code>, <code>SCANNER_FAIL_ON=HIGH</code>. Selected original lines, in source order.</p>
+<pre>[2026-10-29T06:39:22.253Z] Scanner exit code: 1
+[2026-10-29T06:39:34.945Z] Masking supported pattern matches of $SLACK_WEBHOOK_URL
+[2026-10-29T06:39:35.504Z] Slack notification delivered in 1 attempt(s)
+[2026-10-29T06:39:35.891Z] Archiving artifacts
+[2026-10-29T06:39:35.982Z] Archiving artifacts
+Finished: SUCCESS</pre>
+<p><strong>Interpretation:</strong> a summary reports vulnerabilities rather than deploying an image, so scanner policy exit 1 is accepted. Delivery and report archiving succeeded; eight files remain archived.</p>
+
+<h3>12.4 Weekly summary: original console evidence</h3>
+<p>Source: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/console">weekly build #4 console</a>. Manual parameters: <code>SUMMARY_PERIOD=weekly</code>, <code>NOTIFY=true</code>, <code>SCANNER_FAIL_ON=HIGH</code>. Selected original lines, in source order.</p>
+<pre>[2026-10-29T06:39:58.078Z] Scanner exit code: 1
+[2026-10-29T06:40:16.783Z] Masking supported pattern matches of $SLACK_WEBHOOK_URL
+[2026-10-29T06:40:17.337Z] Slack notification delivered in 1 attempt(s)
+[2026-10-29T06:40:17.705Z] Archiving artifacts
+[2026-10-29T06:40:17.803Z] Archiving artifacts
+Finished: SUCCESS</pre>
+
+<h3>12.5 Fresh portfolio findings</h3>
+<p>Both summary runs independently scanned all four configured images on 29 October 2026 and produced the following counts. These are date-specific OS-package findings; they do not replace the historical Sprint 1 scan results.</p>
+<table>
+<thead><tr><th>Image</th><th>CRITICAL</th><th>HIGH</th><th>MEDIUM</th><th>LOW</th><th>Blocking at HIGH</th></tr></thead>
+<tbody>
+<tr><td><code>nginx:latest</code></td><td>1</td><td>58</td><td>106</td><td>164</td><td>59</td></tr>
+<tr><td><code>python:3.12-slim</code></td><td>0</td><td>44</td><td>58</td><td>61</td><td>44</td></tr>
+<tr><td><code>alpine:3.19</code></td><td>0</td><td>2</td><td>5</td><td>3</td><td>2</td></tr>
+<tr><td><code>node:18</code></td><td>228</td><td>2188</td><td>6712</td><td>2754</td><td>2416</td></tr>
+</tbody></table>
+
+<h3>12.6 Archived report artifacts</h3>
+<p>The following filenames were verified through each build's artifact inventory. Links require access to the academic Jenkins server and are subject to its retention policy; the console excerpts above remain embedded in this HTML document.</p>
+<table>
+<thead><tr><th>Run</th><th>Report identifier</th><th>Archived report files</th></tr></thead>
+<tbody>
+<tr><td>HIGH #4</td><td><code>vulnerability-run-4db7171c</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/artifact/reports/vulnerability-run-4db7171c.json">JSON</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/artifact/reports/vulnerability-run-4db7171c.html">HTML</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/artifact/reports/vulnerability-run-4db7171c.pdf">PDF</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/artifact/reports/vulnerability-run-4db7171c.manifest.json">SHA-256 manifest</a></td></tr>
+<tr><td>CRITICAL #5</td><td><code>vulnerability-run-4dfa0116</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/artifact/reports/vulnerability-run-4dfa0116.json">JSON</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/artifact/reports/vulnerability-run-4dfa0116.html">HTML</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/artifact/reports/vulnerability-run-4dfa0116.pdf">PDF</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/artifact/reports/vulnerability-run-4dfa0116.manifest.json">SHA-256 manifest</a></td></tr>
+<tr><td>Daily #16</td><td><code>vulnerability-daily-54236362</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/16/artifact/reports/vulnerability-daily-54236362.json">JSON</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/16/artifact/reports/vulnerability-daily-54236362.html">HTML</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/16/artifact/reports/vulnerability-daily-54236362.pdf">PDF</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/16/artifact/reports/vulnerability-daily-54236362.manifest.json">SHA-256 manifest</a></td></tr>
+<tr><td>Weekly #4</td><td><code>vulnerability-weekly-26dc6136</code></td><td><a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.json">JSON</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.html">HTML</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.pdf">PDF</a> | <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/4/artifact/reports/vulnerability-weekly-26dc6136.manifest.json">SHA-256 manifest</a></td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Evidence boundary:</strong> the material above is captured Jenkins console text and verified artifact inventory, not screenshots of messages inside Slack. Browser screenshot export failed during this session; no blank or reconstructed screenshot is included. Channel-side message screenshots still need to be captured from the Capstone workspace with webhook URLs and other secrets excluded.</div>
+<p>These are notifier delivery confirmations from Jenkins, not Slack channel screenshots. Scheduled parameter defaults and channel-side visual evidence are tracked separately. The shared summary pipeline currently defaults <code>NOTIFY</code> to false and <code>SUMMARY_PERIOD</code> to daily; manual verification does not enable scheduled Slack alerts or fix the weekly default.</p>
 
 <h2>13. Verification Status</h2>
 <table>
@@ -191,7 +266,9 @@ ul{margin:10px 0 10px 0}
 <tr><td>GitHub Actions reports</td><td>Run #13 with report step and evidence bundle</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Jenkins reports</td><td>Build #2 green and build #3 blocked, reports archived in both</td><td><span class="badge done">PASS</span></td></tr>
 <tr><td>Daily / weekly summaries (Jenkins)</td><td>Daily and weekly build #1 with four fresh image scans each</td><td><span class="badge done">PASS</span></td></tr>
-<tr><td>Slack real delivery</td><td>Requires an incoming webhook from the Slack workspace</td><td><span class="badge pending">PENDING</span></td></tr>
+<tr><td>Slack real delivery</td><td>Main builds #4 (HIGH) and #5 (CRITICAL): delivered in one attempt each</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Daily / weekly Slack summaries</td><td>Daily #16 and weekly #4: SUCCESS, eight archived files each, delivered in one attempt each</td><td><span class="badge done">PASS</span></td></tr>
+<tr><td>Scheduled Slack delivery</td><td>Notification-enabled daily/weekly runs and scheduled parameter defaults require separate verification</td><td><span class="badge pending">PENDING</span></td></tr>
 <tr><td>GitHub scheduled cadence</td><td>Manual dispatch after the workflow reaches the default branch</td><td><span class="badge pending">PENDING</span></td></tr>
 </tbody></table>
 

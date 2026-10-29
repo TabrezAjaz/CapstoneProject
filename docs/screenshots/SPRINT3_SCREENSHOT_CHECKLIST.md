@@ -3,6 +3,28 @@
 Capture only genuine executions. Redact webhook URLs, tokens, cookies, private channel names, and
 any sensitive controller details.
 
+## Live Slack delivery evidence (29 October 2026)
+
+Original UTC console excerpts and verified artifact inventories are embedded directly in
+`../Sprint3_Reporting_and_Notifications_Report.html`, sections 12.1 through 12.6.
+These are source-text evidence, not screenshots of Slack messages.
+
+| Case | Jenkins run | Verified result | Report identifier | Archived files |
+|---|---|---|---|---|
+| HIGH alert | Main #4 | Delivered in 1 attempt; expected policy FAILURE; 28 tests passed | `vulnerability-run-4db7171c` | 5 |
+| CRITICAL alert | Main #5 | Delivered in 1 attempt; expected policy FAILURE; 28 tests passed | `vulnerability-run-4dfa0116` | 5 |
+| Daily summary | Daily #16 | Delivered in 1 attempt; SUCCESS | `vulnerability-daily-54236362` | 8 |
+| Weekly summary | Weekly #4 | Delivered in 1 attempt; SUCCESS | `vulnerability-weekly-26dc6136` | 8 |
+
+Both summaries freshly scanned all four configured images with `NOTIFY=true`.
+The report includes the exact console timestamps, current severity counts, and direct links to
+the archived JSON, HTML, PDF, and SHA-256 manifests. Manual delivery success does not establish
+that scheduled notification defaults are enabled.
+
+Browser screenshot export was blank/unreliable in this session. The blank output was removed;
+no fabricated screenshots were added. Channel-side HIGH, CRITICAL, daily, and weekly screenshots
+remain pending and must be captured from the Capstone workspace without showing webhook values.
+
 ## Local (captured)
 
 | Figure | File | Shows |

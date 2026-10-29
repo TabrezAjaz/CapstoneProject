@@ -21,8 +21,8 @@ pipeline {
     }
 
     parameters {
-        choice(name: 'SUMMARY_PERIOD', choices: ['daily', 'weekly'], description: 'Summary cadence label used in reports and notifications')
-        booleanParam(name: 'NOTIFY', defaultValue: false, description: 'Send the summary to Slack using the slack-webhook-url credential')
+        choice(name: 'SUMMARY_PERIOD', choices: ['auto', 'daily', 'weekly'], description: 'Auto selects weekly for a job ending in -Weekly, otherwise daily; explicit values override it')
+        booleanParam(name: 'NOTIFY', defaultValue: true, description: 'Send the summary to Slack using the slack-webhook-url credential')
         choice(name: 'SCANNER_FAIL_ON', choices: ['HIGH', 'CRITICAL', 'MEDIUM', 'LOW'], description: 'Minimum blocking severity recorded in the summary')
     }
 
@@ -32,6 +32,7 @@ pipeline {
         REPORT_OUTPUT_DIR = 'reports'
         SCANNER_TIMEOUT = '15m'
         SCANNER_FAIL_ON = "${params.SCANNER_FAIL_ON}"
+        SUMMARY_PERIOD = "${params.SUMMARY_PERIOD == 'auto' ? (env.JOB_BASE_NAME.endsWith('-Weekly') ? 'weekly' : 'daily') : params.SUMMARY_PERIOD}"
         TZ = 'UTC'
     }
 
