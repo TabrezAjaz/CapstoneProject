@@ -18,8 +18,13 @@ These are source-text evidence, not screenshots of Slack messages.
 
 Both summaries freshly scanned all four configured images with `NOTIFY=true`.
 The report includes the exact console timestamps, current severity counts, and direct links to
-the archived JSON, HTML, PDF, and SHA-256 manifests. Manual delivery success does not establish
-that scheduled notification defaults are enabled.
+the archived JSON, HTML, PDF, and SHA-256 manifests.
+
+Follow-up verification: commit `2bc95ab` enables `NOTIFY=true` and `SUMMARY_PERIOD=auto`.
+Saved defaults and existing UTC timers were verified on both jobs. Daily #17 and weekly #5,
+triggered without parameter overrides, resolved the correct cadence, each delivered Slack in one
+attempt, archived eight files, and finished SUCCESS. These were manual default-parameter tests,
+not timer-fired builds. Sprint 3 reached `main` at `c559d55`; GitHub Slack secret entry remains pending.
 
 Browser screenshot export was blank/unreliable in this session. The blank output was removed;
 no fabricated screenshots were added. Channel-side HIGH, CRITICAL, daily, and weekly screenshots
