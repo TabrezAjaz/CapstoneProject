@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0",
+  "scan_id": "15b566aa-c592-46cc-b5e3-aa58e5eb462f",
+  "scanned_at": "2026-10-29T18:28:38.013183Z",
+  "image": "alpine:3.19",
+  "summary": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 3,
+    "UNKNOWN": 0
+  },
+  "findings": [
+    {
+      "id": "CVE-2024-58251",
+      "pkg": "busybox",
+      "severity": "MEDIUM",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2025-46394",
+      "pkg": "busybox",
+      "severity": "LOW",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2024-58251",
+      "pkg": "busybox-binsh",
+      "severity": "MEDIUM",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2025-46394",
+      "pkg": "busybox-binsh",
+      "severity": "LOW",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2026-40200",
+      "pkg": "musl",
+      "severity": "HIGH",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2026-6042",
+      "pkg": "musl",
+      "severity": "MEDIUM",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2026-40200",
+      "pkg": "musl-utils",
+      "severity": "HIGH",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2026-6042",
+      "pkg": "musl-utils",
+      "severity": "MEDIUM",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2024-58251",
+      "pkg": "ssl_client",
+      "severity": "MEDIUM",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2025-46394",
+      "pkg": "ssl_client",
+      "severity": "LOW",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    }
+  ],
+  "raw_summary": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 3,
+    "UNKNOWN": 0
+  },
+  "suppressed_findings": [],
+  "exception_policy": {
+    "file": "allowlist-alpine-expired-demo.yaml",
+    "sha256": "93f1c54dd0d2364eeb7eb271f0597cdd44142f13657ff3a5fef3d25b3f9fe4c3",
+    "evaluated_on": "2026-10-29",
+    "expired": [
+      {
+        "id": "CVE-2026-40200",
+        "reason": "Expired local demonstration; must not suppress policy findings",
+        "expires": "2026-10-28",
+        "image": "alpine:3.19"
+      }
+    ]
+  },
+  "policy": {
+    "fail_on": "HIGH",
+    "blocking_findings": 2,
+    "passed": false
+  },
+  "scan_options": {
+    "severities": [
+      "LOW",
+      "MEDIUM",
+      "HIGH",
+      "CRITICAL"
+    ],
+    "ignore_unfixed": false,
+    "pkg_types": [
+      "os"
+    ],
+    "timeout": "15m",
+    "retries": 2,
+    "retry_backoff": 1.0
+  },
+  "scanner": {
+    "name": "trivy",
+    "wrapper_version": "0.5.0"
+  },
+  "source": {
+    "provider": "local",
+    "repository": "",
+    "commit": "",
+    "run_id": "",
+    "run_url": ""
+  }
+}

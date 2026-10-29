@@ -1,0 +1,5 @@
+exceptions:
+  - id: CVE-2026-40200
+    image: alpine:3.19
+    reason: "Expired local demonstration; must not suppress policy findings"
+    expires: 2026-10-28

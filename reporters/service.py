@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from html import escape
 import json
 import os
 import tempfile
@@ -38,16 +39,45 @@ def _validate_artifact(data: Any, path: Path) -> dict[str, Any]:
     if not isinstance(summary, dict) or not isinstance(findings, list):
         raise ReportError(f"Invalid summary or findings: {path}")
     for severity in SEVERITIES:
-        if not isinstance(summary.get(severity), int) or summary[severity] < 0:
+        if type(summary.get(severity)) is not int or summary[severity] < 0:
             raise ReportError(f"Invalid {severity} count: {path}")
     counted = {severity: 0 for severity in SEVERITIES}
     for finding in findings:
+        if not isinstance(finding, dict):
+            raise ReportError(f"Invalid finding in {path}")
         severity = str(finding.get("severity", "UNKNOWN")).upper()
-        if severity not in counted:
+        if severity not in counted or finding.get("severity") != severity:
             raise ReportError(f"Invalid finding severity in {path}")
         counted[severity] += 1
     if counted != {severity: summary[severity] for severity in SEVERITIES}:
         raise ReportError(f"Summary does not match findings: {path}")
+    policy = data["policy"]
+    if not isinstance(policy, dict) or policy.get("fail_on") not in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}:
+        raise ReportError(f"Invalid policy threshold: {path}")
+    blocking = sum(count for level, count in counted.items() if RANK[level] >= RANK[policy["fail_on"]])
+    if (type(policy.get("blocking_findings")) is not int or policy["blocking_findings"] != blocking
+            or type(policy.get("passed")) is not bool or policy["passed"] != (blocking == 0)):
+        raise ReportError(f"Policy does not match active findings: {path}")
+    if "suppressed_findings" in data:
+        suppressed = data["suppressed_findings"]
+        raw = data.get("raw_summary")
+        if not isinstance(suppressed, list) or not isinstance(raw, dict):
+            raise ReportError(f"Invalid suppression audit: {path}")
+        audited = dict(counted)
+        for finding in suppressed:
+            if not isinstance(finding, dict) or finding.get("severity") not in audited:
+                raise ReportError(f"Invalid suppressed finding: {path}")
+            exception = finding.get("exception")
+            if (not isinstance(exception, dict) or exception.get("id") != finding.get("id")
+                    or not isinstance(exception.get("reason"), str) or not exception["reason"].strip()):
+                raise ReportError(f"Missing exception justification: {path}")
+            try:
+                datetime.strptime(exception["expires"], "%Y-%m-%d")
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ReportError(f"Invalid exception expiry: {path}") from exc
+            audited[finding["severity"]] += 1
+        if any(type(raw.get(level)) is not int or raw[level] != audited[level] for level in SEVERITIES):
+            raise ReportError(f"Raw counts do not match suppression audit: {path}")
     return data
 
 
@@ -72,7 +102,7 @@ def build_document(artifacts: list[dict[str, Any]], period: str = "run",
         raise ReportError("period must be run, daily, or weekly")
     totals: dict[str, Any] = {severity: 0 for severity in SEVERITIES}
     totals.update({"images": len(artifacts), "findings": 0, "blocking_findings": 0,
-                   "passed_images": 0, "blocked_images": 0})
+                   "passed_images": 0, "blocked_images": 0, "suppressed_findings": 0})
     highest = "UNKNOWN"
     images = []
     for artifact in artifacts:
@@ -81,6 +111,7 @@ def build_document(artifacts: list[dict[str, Any]], period: str = "run",
             if artifact["summary"][severity] and RANK[severity] > RANK[highest]:
                 highest = severity
         totals["findings"] += len(artifact["findings"])
+        totals["suppressed_findings"] += len(artifact.get("suppressed_findings", []))
         totals["blocking_findings"] += artifact["policy"]["blocking_findings"]
         key = "passed_images" if artifact["policy"]["passed"] else "blocked_images"
         totals[key] += 1
@@ -125,12 +156,12 @@ def _render_pdf(document: ReportDocument) -> bytes:
     pdf = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=14 * mm, leftMargin=14 * mm,
                             topMargin=14 * mm, bottomMargin=14 * mm,
                             title=document.title, author="Container Vulnerability Scanner")
-    story = [Paragraph(document.title, styles["Title"]),
+    story = [Paragraph(escape(document.title), styles["Title"]),
              Paragraph(f"{document.period.title()} report · {document.generated_at}", styles["Normal"]),
              Spacer(1, 8), Paragraph(f"Status: {document.overall['status']}", styles["Heading2"]),
              Paragraph(document.overall["summary"], styles["Normal"])]
     for image in document.images:
-        story.extend([PageBreak(), Paragraph(str(image["image"]), styles["Heading1"]),
+        story.extend([PageBreak(), Paragraph(escape(str(image["image"])), styles["Heading1"]),
                       Paragraph(f"Policy: {'PASSED' if image['policy']['passed'] else 'BLOCKED'} · "
                                 f"Blocking findings: {image['policy']['blocking_findings']}", styles["Normal"]),
                       Spacer(1, 8)])
@@ -148,6 +179,20 @@ def _render_pdf(document: ReportDocument) -> bytes:
                                    ("FONTSIZE", (0, 0), (-1, -1), 7),
                                    ("VALIGN", (0, 0), (-1, -1), "TOP")]))
         story.append(table)
+        suppressed = image.get("suppressed_findings", [])
+        if suppressed:
+            story.extend([Spacer(1, 12), Paragraph("Approved exceptions (excluded from gate)", styles["Heading2"])])
+            rows = [["CVE / advisory", "Package", "Reason", "Expires (UTC)"]]
+            for finding in suppressed:
+                exception = finding["exception"]
+                rows.append([Paragraph(escape(str(value)), styles["BodyText"]) for value in
+                             (finding.get("id", ""), finding.get("pkg", ""),
+                              exception["reason"], exception["expires"])])
+            audit = Table(rows, repeatRows=1, colWidths=[38*mm, 32*mm, 70*mm, 25*mm])
+            audit.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e5f1eb")),
+                                      ("GRID", (0, 0), (-1, -1), .4, colors.grey),
+                                      ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+            story.append(audit)
     pdf.build(story)
     return buffer.getvalue()
 

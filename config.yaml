@@ -13,6 +13,8 @@ scanner:
   # Sprint 1 compares OS package CVEs consistently across base images.
   pkg_types: [os]
   timeout: "15m"
+  retries: 2
+  retry_backoff: 1
 
 output:
   dir: "./scan-results"
@@ -26,8 +28,7 @@ images:
   - alpine:3.19
   - node:18
 
-# Placeholders wired up in later sprints
 notifications:
   provider: slack
   alert_on: HIGH
-exceptions_file: "exceptions/allowlist.yaml"   # Sprint 5
+exceptions_file: "exceptions/allowlist.yaml"

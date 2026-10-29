@@ -5,11 +5,13 @@ Project Title: Container Image Vulnerability Scanner with Reporting
 
 Sprint 1-3 scanning, CI gates, reports, and Jenkins Slack delivery are implemented. Sprint 4 adds
 persistent scan history, a responsive Flask/Chart.js dashboard, Prometheus metrics, and a
-provisioned Grafana dashboard. The architecture discussion below preserves the original Sprint 1
+provisioned Grafana dashboard. Sprint 5 adds expiring, scoped CVE exceptions with audit evidence,
+fresh rescan lineage, and fail-closed retry/error handling. The architecture discussion below preserves the original Sprint 1
 design context; see the sprint sections and reports for the implemented state.
 
 - [Sprint 3 reporting and notification evidence](docs/Sprint3_Reporting_and_Notifications_Report.html)
 - [Sprint 4 dashboard and monitoring evidence](docs/Sprint4_Dashboard_and_Monitoring_Report.html)
+- [Sprint 5 exceptions, rescan, and reliability evidence](docs/Sprint5_Exceptions_and_Reliability_Report.html)
 
 ## Architecture Overview
 
@@ -287,4 +289,75 @@ The browser check validates API/UI totals, filters, empty/error states, scan det
 controls, no page overflow, and nonblank chart pixels at 1440x1080 and 390x844. It saves genuine
 screenshots and a JSON verification record under `docs/screenshots`.
 An optional `--audit-scan-id` captures an existing approved-exception audit view.
+
+## Sprint 5 - Exceptions, Rescans and Reliability
+
+The scanner applies `exceptions_file` before calculating active severity counts and the policy
+gate. The committed production allowlist is deliberately empty. Each approval requires an exact
+advisory `id`, a non-empty `reason`, and an expiry in `YYYY-MM-DD` format; optional `image` and
+`pkg` values restrict it to exact scopes. Wildcards, duplicate scopes, malformed fields and missing
+configured files fail closed with exit `2` before Trivy starts.
+
+```yaml
+exceptions:
+  - id: CVE-2026-40200
+    image: alpine:3.19
+    pkg: musl
+    reason: "Example only: temporary reviewed risk acceptance"
+    expires: 2026-10-30
+```
+
+Expiry is inclusive through that UTC calendar date. Expired entries remain visible in audit
+metadata but do not suppress findings. Matching uses the first non-expired rule with the exact ID
+and matching optional scopes. Configuration precedence remains CLI > environment > YAML > defaults.
+A YAML `exceptions_file` path is relative to that YAML file; CLI/environment paths are relative to
+the working directory. The reference `.env.example` is not automatically loaded by the application.
+
+Schema `1.0` gains additive `raw_summary`, `suppressed_findings`, `exception_policy`, and optional
+`rescan_of` fields. Active findings determine the gate; suppressed findings retain package/version,
+reason and expiry. The exception file SHA-256 and evaluation date are recorded. JSON, HTML, PDF
+and the dashboard expose approved exceptions separately. The report loader rejects inconsistent
+active counts, forged policy states, and broken suppression-count audits.
+Trivy's implicit `.trivyignore` file is disabled so it cannot bypass the audited approval policy.
+
+### Fresh Rescans
+
+```powershell
+python -m scanner.trivy_scanner alpine:3.19 --refresh-db --output-dir scan-results/baseline
+python -m scanner.trivy_scanner --rescan-artifact scan-results/baseline/alpine_3.19-6bd2275d.json `
+  --output-dir scan-results/rescan
+```
+
+Every rescan actually invokes Trivy, creates a new UUID/UTC timestamp, and records the previous
+scan ID as `rescan_of`. It does not replay old findings. Use separate output directories and import
+both observations to preserve history. Daily/weekly jobs already refresh the database and rescan
+all configured images; no automatic image-digest watcher is claimed.
+
+### Bounded Retries and Failures
+
+Default: two retries after the first attempt, with 1s then 2s backoff, capped at 30s. Configure
+`--retries` / `SCANNER_RETRIES` (0..5) and `--retry-backoff` / `SCANNER_RETRY_BACKOFF` (0..30s).
+Only recognized transient network/registry failures and process timeouts are retried. Missing
+executables, invalid JSON, authentication/authorization failures, missing manifests and permanent
+errors fail immediately. A process deadline bounds each attempt to the configured Trivy timeout
+plus 30 seconds; enclosing CI timeouts remain an additional bound. `--refresh-db` uses the same
+classified retry helper. Vulnerability policy failures are never retried as operational errors.
+
+Exit codes remain 0 pass, 1 policy block, 2 configuration, 3 operational failure. Malformed Trivy
+result shapes cannot become clean scans. Artifacts are written with atomic replacement; a failed
+write does not produce a partial successful-looking JSON file.
+
+### Evidence and Demonstrations
+
+`tests/fixtures/allowlist-alpine-demo.yaml` is explicitly non-production and date-specific.
+On 29 October 2026, its temporary rule produced 8 active / 2 suppressed findings and exit 0.
+The expired fixture restored 10 active / 0 suppressed findings and exit 1. A missing policy
+returned exit 2 without scanning. The normal allowlist remains empty.
+
+The full integrated suite has 77 deterministic passing tests, and exact desktop/mobile browser
+checks passed. Small public Alpine demonstration artifacts, generated reports and JUnit evidence
+are intentionally archived under `docs/evidence/sprint5`; production inventories, credentials,
+runtime history databases and secrets are not committed. Real scan counts are date/database
+specific; deterministic tests use fixtures. Transient retries were verified by controlled unit
+tests, not by claiming an unperformed live network fault injection.
 

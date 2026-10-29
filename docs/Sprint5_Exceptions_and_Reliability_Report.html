@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sprint 5 - Exceptions and Reliability Report</title><style>
+:root{--ink:#24352d;--green:#147556;--muted:#64776c;--line:#dce5df}*{box-sizing:border-box;letter-spacing:0}body{margin:0;background:#f3f6f3;color:var(--ink);font:15px/1.65 'Trebuchet MS',Verdana,sans-serif}main{max-width:1120px;margin:auto;padding:45px 40px;background:#fff}header{border-bottom:4px solid var(--green);padding-bottom:25px}h1{font-size:30px;line-height:1.25}h2{font-size:22px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-top:38px}h3{font-size:17px}p,li{overflow-wrap:anywhere}code,pre{font-family:Consolas,monospace;font-size:12px}code{background:#edf4ee;padding:2px 4px}pre{padding:18px;background:#edf4ee;white-space:pre-wrap;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;font-size:13px;margin:18px 0}th,td{border:1px solid var(--line);padding:11px;text-align:left;vertical-align:top}th{background:#edf4ee}a{color:var(--green)}figure{margin:22px 0}figure img{display:block;width:100%;height:auto;border:1px solid var(--line)}figcaption{font-size:12px;color:var(--muted);padding:8px 0}.notice{padding:16px;background:#edf4ee;border-left:4px solid var(--green)}.warn{background:#fff7e2;border-color:#c8962d}footer{margin-top:35px;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--muted)}@media(max-width:650px){main{padding:25px 16px}h1{font-size:25px}table{font-size:11px}th,td{padding:7px}}@media print{body{background:#fff}main{padding:0}figure{break-inside:avoid}}
+</style></head><body><main>
+<header><p>CONTAINER IMAGE VULNERABILITY SCANNER WITH REPORTING</p><h1>Sprint 5: Exceptions, Rescans and Reliability</h1><p>Tabrez Ajaz | Verified 29 October 2026 | Wrapper 0.5.0 | Trivy 0.74.0</p></header>
+<h2>1. Objective and Acceptance</h2>
+<p>Let approved vulnerabilities be governed without silently bypassing the security gate. Add fresh rescans, bounded retries and robust error handling while preserving reports, CI exit codes and historical audit evidence.</p>
+<table><thead><tr><th>Requirement</th><th>Implementation</th><th>Verified result</th></tr></thead><tbody>
+<tr><td>Approved exceptions</td><td>Exact advisory ID, mandatory reason/expiry, optional exact image/package scope</td><td>Real active approval suppresses two HIGH package findings; malformed policies fail closed</td></tr>
+<tr><td>Expiry and audit</td><td>UTC date evaluation, raw counts, suppressed findings, reasons, expiry and policy SHA-256</td><td>Expired rule restores the two HIGH findings; HTML/PDF/JSON and UI show audit evidence</td></tr>
+<tr><td>Rescan</td><td>Fresh Trivy invocation, new scan UUID/UTC time and rescan_of lineage</td><td>Real baseline/rescan artifacts retained with matching lineage</td></tr>
+<tr><td>Retries and error handling</td><td>Bounded transient-only retries, process deadlines, atomic artifacts, stable exit codes</td><td>Deterministic tests cover recovery, exhaustion, permanent failures, malformed results and write errors</td></tr>
+<tr><td>CI integration</td><td>Same scanner entrypoint/config in GitHub and Jenkins; metrics/report artifacts before final gate enforcement</td><td>No separate YAML/Groovy exception policy implementation</td></tr>
+</tbody></table>
+<h2>2. Policy Flow</h2>
+<pre>Trivy raw findings
+  -> validate exact allowlist rules and UTC expiry
+  -> active findings -> severity counts -> gate exit 0 / 1
+  -> suppressed findings + reason + expiry -> audit evidence
+  -> raw counts + policy checksum + rescan lineage
+  -> strict report loader -> JSON / HTML / PDF / dashboard
+
+Invalid configuration -> exit 2 before scanning
+Operational error / retries exhausted / malformed output -> exit 3</pre>
+<div class="notice">Suppression is accepted risk, not remediation. Historical CVE/package comparisons include suppressed findings, so an approved vulnerability does not inflate the resolved metric.</div>
+<h2>3. Allowlist Contract</h2>
+<pre>exceptions:
+  - id: CVE-2026-40200
+    image: alpine:3.19
+    pkg: musl
+    reason: "Example only: temporary reviewed risk acceptance"
+    expires: 2026-10-30</pre>
+<ul><li>The default <code>exceptions/allowlist.yaml</code> contains an empty list: no production risk is accepted by the demo.</li><li>ID is exact, with no wildcard. Optional image/package scopes also match exactly.</li><li>Reason must be non-empty; expiry must be a real <code>YYYY-MM-DD</code> date.</li><li>The expiry date is valid inclusively through that UTC calendar day. Expired rules are recorded but do not suppress.</li><li>Missing configured files, malformed content, unknown fields and duplicate ID/scope entries return exit 2 before Trivy starts.</li><li>For overlapping valid scopes, the first matching non-expired rule supplies the audit reason.</li><li>Trivy's implicit ignorefile is disabled so an unrelated .trivyignore cannot silently bypass this policy.</li></ul>
+<p>Precedence remains CLI &gt; environment &gt; YAML &gt; defaults. A YAML exception path is resolved relative to its config file; CLI/environment paths are relative to the process working directory. Supported overrides include <code>--exceptions-file</code> and <code>SCANNER_EXCEPTIONS_FILE</code>.</p>
+<h2>4. Backward-Compatible Audit Schema</h2>
+<table><thead><tr><th>Field</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><code>summary</code>, <code>findings</code>, <code>policy</code></td><td>Active findings and the actual gate decision</td></tr>
+<tr><td><code>raw_summary</code></td><td>Original Trivy severity counts before approved exceptions</td></tr>
+<tr><td><code>suppressed_findings</code></td><td>Finding data plus exact matched reason, expiry and optional scope</td></tr>
+<tr><td><code>exception_policy</code></td><td>Policy basename, SHA-256, UTC evaluation date, expired entries</td></tr>
+<tr><td><code>rescan_of</code></td><td>Previous scan UUID for a fresh rescan</td></tr>
+</tbody></table>
+<p>These fields are additive to scan schema 1.0. Older normalized artifacts remain loadable. The report loader verifies active counts, gate threshold/decision, raw = active + suppressed counts, and suppression justification/expiry shape. Report manifests still record output SHA-256 checksums. Checksums support integrity checks, not cryptographic authorship or authorization signatures.</p>
+<h2>5. Real Exception Verification</h2>
+<p>Image <code>alpine:3.19</code>, OS packages, include unfixed, HIGH gate, Trivy 0.74.0. Two HIGH findings for <code>CVE-2026-40200</code> affect <code>musl</code> and <code>musl-utils</code>. Counts are specific to the database used on 29 October 2026.</p>
+<table><thead><tr><th>Case</th><th>Active HIGH</th><th>Active total</th><th>Suppressed</th><th>Observed exit</th></tr></thead><tbody>
+<tr><td>Default empty allowlist</td><td>2</td><td>10</td><td>0</td><td>1 - blocked</td></tr>
+<tr><td>Temporary non-production approval</td><td>0</td><td>8</td><td>2</td><td>0 - passed</td></tr>
+<tr><td>Expired demonstration rule</td><td>2</td><td>10</td><td>0</td><td>1 - blocked</td></tr>
+<tr><td>Missing configured policy</td><td>Not scanned</td><td>Not scanned</td><td>Not applicable</td><td>2 - configuration error</td></tr>
+</tbody></table>
+<pre>Verified exits: approved=0 expired=1 invalid=2
+
+Approved: scan_id=2813a9eb-6b41-4b36-93be-8b57552f59f6
+Expired:  scan_id=15b566aa-c592-46cc-b5e3-aa58e5eb462f</pre>
+<p>Each demonstration actually invoked Trivy except the invalid policy, which failed before execution. The temporary approval is confined to <code>tests/fixtures/allowlist-alpine-demo.yaml</code> and is explicitly not production approval. Its 30 October expiry intentionally makes this live example date-specific. Deterministic expiry tests use a fixed date and do not depend on the current calendar.</p>
+<figure><img src="screenshots/sprint5-exception-audit.png" alt="Actual approved exception audit showing two HIGH musl package findings, reason and expiry"><figcaption>Genuine browser capture: approved scan passes with blocking 0, while both suppressed findings, the non-production reason and expiry remain visible. The current overall inventory behind the dialog is from a later blocked scan.</figcaption></figure>
+<h2>6. Fresh Rescan Evidence</h2>
+<pre>python -m scanner.trivy_scanner alpine:3.19 --refresh-db --output-dir scan-results/baseline
+python -m scanner.trivy_scanner --rescan-artifact scan-results/baseline/alpine_3.19-6bd2275d.json --output-dir scan-results/rescan</pre>
+<table><thead><tr><th>Observation</th><th>Scan UUID</th><th>UTC timestamp</th></tr></thead><tbody>
+<tr><td>Baseline</td><td><code>fa356ec8-553d-4769-bb81-20aeb03b599b</code></td><td>2026-10-29T13:57:51.161781Z</td></tr>
+<tr><td>Fresh rescan</td><td><code>3531bf6a-0b7e-491d-aebb-b4d881adb621</code></td><td>2026-10-29T13:57:53.922734Z</td></tr>
+</tbody></table>
+<p>The rescan artifact records <code>rescan_of=fa356ec8-553d-4769-bb81-20aeb03b599b</code>. Both scans observed two HIGH findings and blocked; no remediation was invented. The full exact baseline timestamp is retained in the linked original artifact. Daily/weekly jobs also refresh the database and rescan all configured images. No automatic registry digest-change watcher is implemented or claimed.</p>
+<h2>7. Retry and Operational Failure Contract</h2>
+<table><thead><tr><th>Condition</th><th>Behaviour</th></tr></thead><tbody>
+<tr><td>Recognized transient network/registry failure</td><td>Default initial attempt + at most 2 retries; exponential 1s, 2s backoff</td></tr>
+<tr><td>Process timeout</td><td>Bounded retry; each attempt has the configured Trivy timeout plus a 30s outer deadline</td></tr>
+<tr><td>Authentication/authorization error or missing manifest</td><td>No retry; operational exit 3</td></tr>
+<tr><td>Missing executable, invalid JSON or malformed result shape</td><td>Fail immediately; never reinterpret as a clean scan</td></tr>
+<tr><td>Vulnerability gate block</td><td>Exit 1; not retried as an operational failure</td></tr>
+<tr><td>Artifact write failure</td><td>Atomic temporary file/replace; exit 3 without partial successful-looking JSON</td></tr>
+</tbody></table>
+<p><code>--retries</code> accepts 0..5; <code>--retry-backoff</code> accepts finite 0..30 seconds, with each delay capped at 30s. CLI/environment/YAML overrides share one validation path. <code>--refresh-db</code> uses the same retry classifier. Enclosing CI timeouts provide a further total bound. Secret-bearing URL userinfo is redacted from error messages; retry notices do not repeat arbitrary registry stderr.</p>
+<div class="notice warn">Retry recovery/exhaustion and timeout cases were verified with deterministic controlled subprocess tests. No unperformed live network outage or injected registry failure is represented as real infrastructure evidence.</div>
+<h2>8. Tests and Reproducible Evidence</h2>
+<pre>python -m pytest tests -q --junitxml=test-results/sprint45-junit.xml
+77 passed
+
+python -m dashboard.browser_check --executable &lt;installed-Chrome-path&gt; --audit-scan-id &lt;approved-scan-UUID&gt;</pre>
+<p>The integrated suite covers approval/expiry/scoping, mandatory fields, duplicate rules, relative config paths, policy changes, preserved audit counts, fresh lineage, database refresh, transient/permanent failures, retry exhaustion, process deadlines, malformed result structures, scratch-image metadata, atomic write failures, report integrity and dashboard history. The independently committed Sprint 4 branch passed 35 tests; the integrated Sprint 5 branch passed 77.</p>
+<p>Playwright verified exact desktop/mobile viewports, readable filter widths, API/UI counts, image/severity/date filters, empty and invalid-range states, scan drilldown, deep-linked audit details, nonblank canvas pixels and no browser JavaScript errors.</p>
+<table><thead><tr><th>Original evidence</th><th>Link</th></tr></thead><tbody>
+<tr><td>Baseline normalized scan</td><td><a href="evidence/sprint5/baseline.json">baseline.json</a></td></tr>
+<tr><td>Fresh rescan with lineage</td><td><a href="evidence/sprint5/rescan.json">rescan.json</a></td></tr>
+<tr><td>Approved scan and suppression audit</td><td><a href="evidence/sprint5/approved.json">approved.json</a></td></tr>
+<tr><td>Expired-rule scan</td><td><a href="evidence/sprint5/expired.json">expired.json</a></td></tr>
+<tr><td>Generated audit report</td><td><a href="evidence/sprint5/vulnerability-run-63eae946.json">JSON</a> | <a href="evidence/sprint5/vulnerability-run-63eae946.html">HTML</a> | <a href="evidence/sprint5/vulnerability-run-63eae946.pdf">PDF</a> | <a href="evidence/sprint5/vulnerability-run-63eae946.manifest.json">SHA-256 manifest</a></td></tr>
+<tr><td>Genuine JUnit result: 77 tests, 0 failures, 0 errors</td><td><a href="evidence/sprint5/junit.xml">JUnit XML</a></td></tr>
+<tr><td>Exact browser checks and capture metadata</td><td><a href="screenshots/sprint4-browser-check.json">Browser verification JSON</a></td></tr>
+</tbody></table>
+<h2>9. Limitations and Security Boundary</h2>
+<ul><li>Scanning remains OS-package scoped by default. Language dependencies require a deliberate scope change.</li><li>Allowlist changes are repository policy and need human review. The code does not establish an approver identity or enforce branch protection by itself.</li><li>A checksum detects changes against a trusted manifest; it is not a digital signature.</li><li>Exception expiry is checked at scan time. An old approved artifact is historical evidence, not authorization for a future build.</li><li>Live demo counts can change with the vulnerability database; fixtures make the tests stable.</li><li>Slack/Jenkins and GitHub use separate secret stores. GitHub Slack secret entry and rotation of the previously exposed webhook require direct account-owner action; no secret is embedded here.</li></ul>
+<h2>10. Conclusion</h2><p>Sprint 5 implements governed exception handling without hiding accepted risk, fresh lineage-preserving rescans, and fail-closed reliability controls. Real active/expired policy demonstrations, original artifacts, generated audit reports, repeatable browser evidence and 77 passing tests support the delivered behaviour.</p>
+<footer>Container Image Vulnerability Scanner with Reporting | Sprint 5 | Tabrez Ajaz</footer>
+</main></body></html>
