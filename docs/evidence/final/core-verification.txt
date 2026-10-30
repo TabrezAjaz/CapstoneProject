@@ -1,0 +1,43 @@
+Verification captured UTC: 2026-10-29T20:54:11.0881481Z
+Version: 0.74.0
+Vulnerability DB:
+  Version: 2
+  UpdatedAt: 2026-10-29 13:09:46.269823229 +0000 UTC
+  NextUpdate: 2026-10-30 13:09:46.269822928 +0000 UTC
+  DownloadedAt: 2026-10-29 13:57:48.6240251 +0000 UTC
+Command: python -m scanner.trivy_scanner hello-world:latest --exceptions-file exceptions/allowlist.yaml --fail-on HIGH --output-dir scan-results/final-core-clean
+2026-10-30 02:24:12,442 INFO Scanning image=hello-world:latest severities=LOW,MEDIUM,HIGH,CRITICAL
+2026-10-30 02:24:15,297 INFO Done image=hello-world:latest summary={'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'UNKNOWN': 0}
+2026-10-30 02:24:15,302 INFO POLICY PASSED image=hello-world:latest
+{
+  "image": "hello-world:latest",
+  "summary": {
+    "CRITICAL": 0,
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNKNOWN": 0
+  },
+  "fail_on": "HIGH",
+  "blocking_findings": 0,
+  "artifact": "scan-results\\final-core-clean\\hello-world_latest-e6c1104d.json"
+}
+Observed clean-image exit: 0
+Command: python -m scanner.trivy_scanner alpine:3.19 --exceptions-file exceptions/allowlist.yaml --fail-on HIGH --output-dir scan-results/final-core-vulnerable
+2026-10-30 02:24:15,616 INFO Scanning image=alpine:3.19 severities=LOW,MEDIUM,HIGH,CRITICAL
+2026-10-30 02:24:17,970 INFO Done image=alpine:3.19 summary={'CRITICAL': 0, 'HIGH': 2, 'MEDIUM': 5, 'LOW': 3, 'UNKNOWN': 0}
+2026-10-30 02:24:17,975 ERROR POLICY BLOCKED image=alpine:3.19 blocking_findings=2
+{
+  "image": "alpine:3.19",
+  "summary": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 3,
+    "UNKNOWN": 0
+  },
+  "fail_on": "HIGH",
+  "blocking_findings": 2,
+  "artifact": "scan-results\\final-core-vulnerable\\alpine_3.19-6bd2275d.json"
+}
+Observed vulnerable-image exit: 1

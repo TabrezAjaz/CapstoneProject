@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "scan_id": "27c31b93-4f66-423d-8dd4-6fbae32a70da",
+  "scanned_at": "2026-10-29T20:54:15.297881Z",
+  "image": "hello-world:latest",
+  "summary": {
+    "CRITICAL": 0,
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNKNOWN": 0
+  },
+  "findings": [],
+  "raw_summary": {
+    "CRITICAL": 0,
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNKNOWN": 0
+  },
+  "suppressed_findings": [],
+  "exception_policy": {
+    "file": "allowlist.yaml",
+    "sha256": "a0c170a94624bcd2b225c63bcbadcc2e75fc94dd32d6499873641f92a7ee521b",
+    "evaluated_on": "2026-10-29",
+    "expired": []
+  },
+  "policy": {
+    "fail_on": "HIGH",
+    "blocking_findings": 0,
+    "passed": true
+  },
+  "scan_options": {
+    "severities": [
+      "LOW",
+      "MEDIUM",
+      "HIGH",
+      "CRITICAL"
+    ],
+    "ignore_unfixed": false,
+    "pkg_types": [
+      "os"
+    ],
+    "timeout": "15m",
+    "retries": 2,
+    "retry_backoff": 1.0
+  },
+  "scanner": {
+    "name": "trivy",
+    "wrapper_version": "0.5.0"
+  },
+  "source": {
+    "provider": "local",
+    "repository": "",
+    "commit": "",
+    "run_id": "",
+    "run_url": ""
+  }
+}

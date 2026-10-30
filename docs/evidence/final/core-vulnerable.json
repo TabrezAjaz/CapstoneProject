@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0",
+  "scan_id": "59b455b0-e86c-40a7-8bbe-0ff1ef0b9a21",
+  "scanned_at": "2026-10-29T20:54:17.970747Z",
+  "image": "alpine:3.19",
+  "summary": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 3,
+    "UNKNOWN": 0
+  },
+  "findings": [
+    {
+      "id": "CVE-2024-58251",
+      "pkg": "busybox",
+      "severity": "MEDIUM",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2025-46394",
+      "pkg": "busybox",
+      "severity": "LOW",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2024-58251",
+      "pkg": "busybox-binsh",
+      "severity": "MEDIUM",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2025-46394",
+      "pkg": "busybox-binsh",
+      "severity": "LOW",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2026-40200",
+      "pkg": "musl",
+      "severity": "HIGH",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2026-6042",
+      "pkg": "musl",
+      "severity": "MEDIUM",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2026-40200",
+      "pkg": "musl-utils",
+      "severity": "HIGH",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2026-6042",
+      "pkg": "musl-utils",
+      "severity": "MEDIUM",
+      "installed": "1.2.4_git20230717-r5",
+      "fixed": "1.2.4_git20230717-r6"
+    },
+    {
+      "id": "CVE-2024-58251",
+      "pkg": "ssl_client",
+      "severity": "MEDIUM",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    },
+    {
+      "id": "CVE-2025-46394",
+      "pkg": "ssl_client",
+      "severity": "LOW",
+      "installed": "1.36.1-r20",
+      "fixed": "1.36.1-r21"
+    }
+  ],
+  "raw_summary": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 3,
+    "UNKNOWN": 0
+  },
+  "suppressed_findings": [],
+  "exception_policy": {
+    "file": "allowlist.yaml",
+    "sha256": "a0c170a94624bcd2b225c63bcbadcc2e75fc94dd32d6499873641f92a7ee521b",
+    "evaluated_on": "2026-10-29",
+    "expired": []
+  },
+  "policy": {
+    "fail_on": "HIGH",
+    "blocking_findings": 2,
+    "passed": false
+  },
+  "scan_options": {
+    "severities": [
+      "LOW",
+      "MEDIUM",
+      "HIGH",
+      "CRITICAL"
+    ],
+    "ignore_unfixed": false,
+    "pkg_types": [
+      "os"
+    ],
+    "timeout": "15m",
+    "retries": 2,
+    "retry_backoff": 1.0
+  },
+  "scanner": {
+    "name": "trivy",
+    "wrapper_version": "0.5.0"
+  },
+  "source": {
+    "provider": "local",
+    "repository": "",
+    "commit": "",
+    "run_id": "",
+    "run_url": ""
+  }
+}

@@ -6,6 +6,11 @@ The delivered Sprint 1-5 implementation is merged into `main`; sprint branches r
 snapshots. Trivy is pinned to **0.74.0**, the wrapper is **0.5.0**, and the integrated suite has
 **77 deterministic tests**. Real browser checks cover desktop and mobile layouts.
 
+**Final submission report:** [Complete HTML report](docs/Final_Project_Report.html) |
+[Printable PDF](docs/Final_Project_Report.pdf). The report consolidates Sprints 1-5, the final
+architecture, genuine screenshots, original scan/test/CI evidence, reproduction steps and
+explicit outstanding account-owner actions.
+
 ## Delivery Status
 
 | Sprint | Delivered capability | Verification |
@@ -114,6 +119,8 @@ original embedded title and planned Teams/email labels are historical, not curre
 
 ## Reports and Evidence
 
+- [Final consolidated project report: HTML](docs/Final_Project_Report.html) | [PDF](docs/Final_Project_Report.pdf)
+- [Final verification artifacts, command logs, JUnit and GitHub API evidence](docs/evidence/final/)
 - [Sprint 1 setup and basic scanning](docs/Sprint1_Setup_and_Basic_Scanning_Report.html)
 - [Sprint 2 CI/CD integration](docs/Sprint2_CI_CD_Integration_Report.html)
 - [Sprint 3 reporting and notifications](docs/Sprint3_Reporting_and_Notifications_Report.html)
