@@ -54,9 +54,9 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <p><strong>Scanner engine:</strong> Trivy 0.74.0</p><p><strong>Python wrapper:</strong> 0.5.0</p>
 <p><strong>Implementation baseline:</strong> 399d1af</p><p><strong>Integrated deterministic suite:</strong> 77 tests</p>
 </div>
-<p><a href="https://github.com/TabrezAjaz/CapstoneProject">Public source repository</a> | <a href="../README.md">Operating documentation</a> | <a href="Final_Project_Report.pdf">Printable PDF edition</a></p>
-<div class="notice"><strong>Delivery statement:</strong> Sprint 1-5 implementation is merged into main. Jenkins Slack transport has been verified. GitHub Slack secret entry, rotation of the previously exposed webhook and channel-side visual evidence remain account-owner actions; they are not represented as completed.</div>
-<p class="subtle">This report consolidates implementation, original artifacts, genuine browser captures and verified execution records. Milestone reports remain historical appendices. Live vulnerability counts depend on the scan date, image and advisory database.</p>
+<p><a href="https://github.com/TabrezAjaz/CapstoneProject">https://github.com/TabrezAjaz/CapstoneProject</a> | <a href="../README.md">Operating documentation</a> | <a href="Final_Project_Report.pdf">Printable PDF edition</a></p>
+<div class="notice"><strong>Project status:</strong> The Sprint 1-5 implementation is integrated on main, with automated tests, CI security gates, reporting and local monitoring validated. Jenkins Slack delivery is verified. Remaining notification configuration and verification limits are listed in Section 13.</div>
+<p class="subtle">This report documents my project objectives, implementation, testing and results across five sprints. Screenshots and original execution artifacts accompany the results. Vulnerability counts depend on the scan date, image and advisory database.</p>
 </header>
 
 <nav aria-label="Contents"><h2>Contents</h2><ol>
@@ -72,7 +72,7 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 </ol></nav>
 
 <section id="summary"><h2>1. Executive Summary</h2>
-<p>The project converts Trivy scan results into a consistent security control rather than an isolated command-line scan. The Python wrapper loads configuration, invokes a pinned scanner, validates the result structure, applies approved exceptions, writes normalized evidence and returns a stable policy or operational exit code. GitHub Actions and Jenkins use the same implementation.</p>
+<p>My objective was to integrate container vulnerability scanning into a repeatable development workflow, with clear security decisions and reviewable results. I used Trivy as the scanning engine and implemented a Python wrapper to load configuration, validate results, apply approved exceptions, write normalized evidence and return consistent exit codes. GitHub Actions and Jenkins use the same implementation.</p>
 <p>A strict reporting layer renders JSON, HTML and PDF from one canonical model and publishes SHA-256 manifests. Slack messages distinguish severity and scheduled portfolio summaries. A separate local monitoring deployment imports original observations into SQLite and exposes a read-only Flask/Chart.js dashboard and Prometheus metrics; Grafana queries Prometheus for sampled time-series views.</p>
 <p>The final implementation includes reasoned, scoped and expiring exceptions, preserved suppression audit, fresh rescan lineage, classified retries, process deadlines and atomic artifact writes. The integrated suite contains 77 deterministic tests. GitHub main run <a href="https://github.com/TabrezAjaz/CapstoneProject/actions/runs/40951355890">#31</a>, for baseline <code>399d1af</code>, completed successfully. Its Slack step was skipped, not delivered, because the repository secret is absent.</p>
 </section>
@@ -99,24 +99,27 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>CI and tests</td><td>.github/workflows/; ci/; tests/</td><td>Real scans, gate/report orchestration, deterministic tests and evidence archives</td></tr>
 </tbody></table>
 <p>CI uses Python 3.12; local verification has used Python 3.14. Python dependencies have bounded version ranges, not a claim of fully locked transitive dependencies. Runtime databases, raw operational outputs, credentials and virtual environments are excluded from Git. Small public demonstration artifacts are intentionally archived under docs/evidence.</p>
-<p>Milestone branches preserve sprint snapshots while main contains the complete delivered implementation. An authorized email-only history correction changed commit IDs without changing any of the 32 commit trees. Historical CI URLs and screenshot hashes still describe their original executions; they were not relabelled as new runs.</p>
+<p>I maintained milestone branches for the individual sprints and integrated the final implementation on main. The linked milestone runs record the code and test suite available at that stage; final-version verification is identified separately.</p>
 </section>
 
 <section id="architecture" class="architecture"><h2>4. Implemented Deployment Architecture</h2>
-<figure><img src="deployment-architecture.svg" alt="Implemented deployment architecture showing CI hosts, registry and DB inputs, artifact store, manual import, SQLite, Flask, Prometheus and Grafana"><figcaption>Figure 1. Deployment architecture, not a sprint roadmap. The local monitoring host is separate from hosted CI. Dotted artifact transfer is a manual download/import, not an implemented automatic push.</figcaption></figure>
+<figure><img src="deployment-architecture.svg" alt="Implemented deployment architecture showing CI hosts, registry and DB inputs, artifact store, manual import, SQLite, Flask, Prometheus and Grafana"><figcaption>Figure 1. Final deployment architecture. Hosted CI and the local monitoring host are separate environments. The dotted handoff represents manual artifact download and import.</figcaption></figure>
 <p><a href="deployment-architecture.svg">Full-size vector</a> | <a href="deployment-architecture.png">High-resolution PNG</a> | <a href="deployment-architecture.mmd">Editable Mermaid source</a></p>
-<p>GitHub runners and Jenkins agents are alternative execution environments. The scanner remains a short-lived CLI. The local persistent Flask exporter serves SQLite observations after scans finish; Prometheus scrapes it every 15 seconds and Grafana queries Prometheus. SQLite keeps original scan timestamps, while Prometheus stores samples only after scraping starts. The old image is a <em>Historical Sprint 1 Component and Workflow Overview</em>, not this final deployment architecture.</p>
+<p>GitHub runners and Jenkins agents are alternative execution environments. The scanner runs as a short-lived CLI. The persistent local Flask exporter serves SQLite observations after scans finish; Prometheus scrapes it every 15 seconds and Grafana queries Prometheus. SQLite preserves scan timestamps, while Prometheus records samples from the start of scraping.</p>
 </section>
 
 <section id="setup"><h2>5. Sprint 1: Foundation and Basic Scanning</h2>
 <p>The initial structure separated scanner, configuration, CI, reporting, notification, exceptions, tests and documentation. Trivy was chosen as the underlying scanning engine rather than recreating advisory matching in Python. Registry-reference scans do not require mounting the Docker socket. The scanner downloads/refreshes its advisory database and uses the local cache during analysis.</p>
-<p>Current core acceptance is reverified by <a href="evidence/final/core-verification.txt">an original command-output log</a>, fresh normalized <a href="evidence/final/core-clean.json">clean-image</a> and <a href="evidence/final/core-vulnerable.json">vulnerable-image</a> artifacts, and the latest main CI scan. These are final-version checks, not backdated Sprint 1 captures.</p>
+<h3>Setup Procedure</h3>
+<ol><li>Clone the project repository and create an isolated Python environment.</li><li>Install the project and development dependencies, then install Trivy 0.74.0 and verify that it is available on PATH.</li><li>Configure scan severity, output paths and timeout in config.yaml. Keep credentials outside version control.</li><li>Scan a clean image and a vulnerable image; check the normalized findings and the corresponding policy exit codes.</li></ol>
+<p>Section 14 provides the commands for reproducing the environment, scans, reports and monitoring deployment.</p>
+<p>I checked the final scanner version against a clean image and an image with known package vulnerabilities. The <a href="evidence/final/core-verification.txt">command-output log</a>, normalized <a href="evidence/final/core-clean.json">clean-image</a> and <a href="evidence/final/core-vulnerable.json">vulnerable-image</a> artifacts record the commands and results. These final verification runs complement the earlier sprint evidence.</p>
 <table><thead><tr><th>Fresh final-version scan</th><th>Original scan ID and UTC time</th><th>Observed outcome</th></tr></thead><tbody>
 <tr><td>hello-world:latest</td><td><code>27c31b93-4f66-423d-8dd4-6fbae32a70da</code><br>2026-10-29T20:54:15.297881Z</td><td>0 findings; 0 blocking; exit 0</td></tr>
 <tr><td>alpine:3.19</td><td><code>59b455b0-e86c-40a7-8bbe-0ff1ef0b9a21</code><br>2026-10-29T20:54:17.970747Z</td><td>10 active findings including 2 HIGH; 2 blocking; exit 1</td></tr>
 </tbody></table>
-<p>The original log records the pinned engine and cached database timestamps. Raw artifact timestamps are UTC; the local Python log clock uses the host timezone. These scans are evidence of the final wrapper version, not a reconstruction of the first development session.</p>
-<div class="notice warning"><strong>Evidence provenance:</strong> several older Sprint 1 terminal-style figures were rendered from a static HTML evidence page. They are historical presentation panels, not independent terminal screenshots, and are deliberately not reused as primary execution proof in this final report. The same rule excludes small reconstructed Sprint 3 panels.</div>
+<p>The log records the scanner version and cached database timestamps. Artifact timestamps use UTC; the local Python log clock uses the host timezone.</p>
+<figure><img src="screenshots/final-core-verification.png" alt="Browser view of the original scanner version and clean and vulnerable image command-output log"><figcaption>Figure 2. Original saved command output viewed in Chrome: Trivy version, clean scan with exit 0 and vulnerable scan with exit 1. This is a browser view of the retained log, not a terminal screenshot.</figcaption></figure>
 <p>Original dated observations remain available in <a href="evidence/sprint5/baseline.json">baseline.json</a> and <a href="evidence/sprint5/rescan.json">rescan.json</a>. Their source fields, UUIDs, timestamps, scanner versions and full findings provide inspectable evidence beyond a screenshot.</p>
 </section>
 
@@ -147,15 +150,18 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Jenkins Sprint 2 build #3</td><td>alpine:3.19 blocked with 2 HIGH findings; JSON archived</td><td>Threshold block preserved evidence</td></tr>
 <tr><td>Latest baseline main run #31</td><td>Success for 399d1af: tests, real scan, reports and upload</td><td>Current integrated implementation; Slack skipped</td></tr>
 </tbody></table>
-<figure><img src="screenshots/sprint2-github-passed-steps.png" alt="Actual successful GitHub Actions steps from the Sprint 2 milestone"><figcaption>Figure 2. Genuine GitHub browser capture of the passing milestone pipeline. Historical test counts and dates are not presented as current totals.</figcaption></figure>
-<figure><img src="screenshots/sprint2-github-blocked-run.png" alt="Actual GitHub Actions run intentionally blocked by vulnerability policy"><figcaption>Figure 3. Genuine blocked GitHub run: the red outcome demonstrates the security gate.</figcaption></figure>
-<figure><img src="screenshots/sprint2-jenkins-blocked-console.png" alt="Actual Jenkins console showing HIGH findings and policy-blocked result"><figcaption>Figure 4. Genuine Jenkins console capture for the intentional HIGH-threshold block.</figcaption></figure>
+<figure><img src="screenshots/sprint2-github-passed-steps.png" alt="Successful GitHub Actions steps from the Sprint 2 milestone"><figcaption>Figure 3. Passing GitHub Actions pipeline at the Sprint 2 milestone.</figcaption></figure>
+<figure><img src="screenshots/sprint2-github-blocked-run.png" alt="GitHub Actions run intentionally blocked by vulnerability policy"><figcaption>Figure 4. GitHub Actions pipeline blocked by the vulnerability policy, demonstrating enforcement of the security gate.</figcaption></figure>
+<figure><img src="screenshots/final-jenkins-clean.png" alt="Successful Jenkins build number 2 showing the archived clean-image scan artifact"><figcaption>Figure 5. Passing Jenkins Sprint 2 build #2 with the clean-image JSON artifact archived.</figcaption></figure>
+<figure><img src="screenshots/sprint2-jenkins-blocked-console.png" alt="Jenkins console showing HIGH findings and policy-blocked result"><figcaption>Figure 6. Jenkins console showing the intentional HIGH-threshold policy block.</figcaption></figure>
+<figure><img src="screenshots/final-github-main.png" alt="Successful GitHub Actions main run number 31 at implementation baseline 399d1af with an evidence artifact"><figcaption>Figure 7. Successful main-branch integration run #31 for baseline 399d1af, with the evidence artifact retained.</figcaption></figure>
 <p>Machine-readable current verification: <a href="evidence/final/github-main-run.json">run metadata</a>, <a href="evidence/final/github-main-jobs.json">step outcomes</a> and <a href="evidence/final/github-main-artifacts.json">uploaded artifact metadata</a>. The public run URL is <a href="https://github.com/TabrezAjaz/CapstoneProject/actions/runs/40951355890">40951355890 / #31</a>.</p>
 </section>
 
 <section id="reporting"><h2>8. Sprint 3: Reports and Slack Notifications</h2>
 <p>Schema 1.0 normalized scans feed a strict loader that validates severity counts, policy state and suppression audit. One canonical model generates JSON, autoescaped HTML and PDF. A manifest records output filename, media type, byte size and SHA-256. Checksums demonstrate integrity against a trusted manifest; they do not prove authorship or approval identity.</p>
 <p>The archived approved-scan report is available as <a href="evidence/sprint5/vulnerability-run-63eae946.json">JSON</a>, <a href="evidence/sprint5/vulnerability-run-63eae946.html">HTML</a> and <a href="evidence/sprint5/vulnerability-run-63eae946.pdf">PDF</a>, with its <a href="evidence/sprint5/vulnerability-run-63eae946.manifest.json">original checksum manifest</a>. All outputs retain the same report identity.</p>
+<figure><img src="screenshots/final-generated-report.png" alt="Generated HTML vulnerability report showing active findings and the separate approved-exceptions audit"><figcaption>Figure 8. Generated HTML report for the approved demonstration scan. Active findings and the two temporarily approved HIGH findings are shown separately.</figcaption></figure>
 <p>Slack is the implemented provider. Webhooks are injected from environment/CI credentials, validated as permitted HTTPS Slack endpoints and never embedded in project configuration. Messages neutralize mass mentions and limit scan-controlled text. Delivery retries transient HTTP/network conditions and fails operationally after exhaustion.</p>
 <table><thead><tr><th>Jenkins Sprint 3 execution</th><th>Evidence-based result</th></tr></thead><tbody>
 <tr><td>Main build #4: HIGH alert</td><td>Intentional policy failure; Slack delivered in one attempt; tests/reports retained</td></tr>
@@ -164,7 +170,7 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Daily #17 / Weekly #5</td><td>SUCCESS with saved defaults, correct cadence and delivery in one attempt</td></tr>
 </tbody></table>
 <p>These are verified delivery logs, not screenshots proving channel-side receipt. Original controller links: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/console">HIGH #4</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/console">CRITICAL #5</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/17/console">Daily #17</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/5/console">Weekly #5</a>. Academic Jenkins may require login and is subject to retention.</p>
-<p>Selected original console lines already recorded in the Sprint 3 milestone report are reproduced below. Execution names are contextual labels; these are not newly captured console sessions.</p>
+<p>The following console records, retained in the Sprint 3 milestone report, show successful Slack transport delivery for alerts and scheduled-summary jobs.</p>
 <table><thead><tr><th>Execution</th><th>Original delivery line</th></tr></thead><tbody>
 <tr><td>HIGH main #4</td><td><code>[2026-10-29T06:37:57.366Z] Slack notification delivered in 1 attempt(s)</code></td></tr>
 <tr><td>CRITICAL main #5</td><td><code>[2026-10-29T06:38:56.071Z] Slack notification delivered in 1 attempt(s)</code></td></tr>
@@ -173,8 +179,8 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Daily #17: saved defaults</td><td><code>[2026-10-29T18:28:40.484Z] Slack notification delivered in 1 attempt(s)</code></td></tr>
 <tr><td>Weekly #5: saved defaults</td><td><code>[2026-10-29T18:27:53.087Z] Slack notification delivered in 1 attempt(s)</code></td></tr>
 </tbody></table>
-<figure><img src="screenshots/sprint3-jenkins-daily.png" alt="Genuine Jenkins daily summary build capture"><figcaption>Figure 5. Genuine milestone daily-summary browser capture. Later default-parameter delivery runs are identified separately above; this image is not relabelled as build #17.</figcaption></figure>
-<figure><img src="screenshots/sprint3-jenkins-weekly.png" alt="Genuine Jenkins weekly summary build capture"><figcaption>Figure 6. Genuine milestone weekly-summary browser capture, not a screenshot of a Slack channel.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-daily.png" alt="Jenkins daily summary build capture"><figcaption>Figure 9. Jenkins daily-summary milestone build #1. Subsequent default-parameter delivery checks are recorded in the table above.</figcaption></figure>
+<figure><img src="screenshots/sprint3-jenkins-weekly.png" alt="Jenkins weekly summary build capture"><figcaption>Figure 10. Jenkins weekly-summary milestone build.</figcaption></figure>
 </section>
 
 <section id="scheduling"><h2>9. Scheduled Automation</h2>
@@ -195,10 +201,10 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Grafana</td><td>127.0.0.1:3030/d/container-security</td><td>Provisioned datasource/eight panels; anonymous Viewer; named volume</td></tr>
 </tbody></table>
 <p>Latest active findings are pending. New and resolved findings compare exact advisory/package pairs against the previous stored observation. Suppressed pairs remain in this comparison, so accepting risk is not falsely reported as remediation. First observations are baselines. These transition metrics are gauges, not fabricated cumulative counters.</p>
-<figure><img src="screenshots/sprint4-dashboard-desktop.png" alt="Actual desktop security dashboard with inventory, charts and historical scan observations"><figcaption>Figure 7. Genuine desktop capture. Displayed counts reflect the stored observations at capture time, not invented sample data.</figcaption></figure>
-<figure class="mobile"><img src="screenshots/sprint4-dashboard-mobile.png" alt="Actual mobile security dashboard"><figcaption>Figure 8. Genuine mobile capture; exact 390x844 checks confirmed readable controls, nonblank charts and no horizontal page overflow.</figcaption></figure>
-<figure><img src="screenshots/sprint4-prometheus-targets.png" alt="Actual Prometheus target page showing the exporter is up"><figcaption>Figure 9. Genuine Prometheus target-health capture.</figcaption></figure>
-<figure><img src="screenshots/sprint4-grafana.png" alt="Actual provisioned Grafana container-security dashboard"><figcaption>Figure 10. Genuine Grafana monitoring capture. Prometheus history begins with scraping; old SQLite timestamps are not backfilled as artificial samples.</figcaption></figure>
+<figure><img src="screenshots/sprint4-dashboard-desktop.png" alt="Desktop security dashboard with inventory, charts and historical scan observations"><figcaption>Figure 11. Desktop dashboard showing stored scan observations, inventory and charts.</figcaption></figure>
+<figure class="mobile"><img src="screenshots/sprint4-dashboard-mobile.png" alt="Mobile security dashboard"><figcaption>Figure 12. Mobile dashboard at 390x844. Browser checks verified readable controls, nonblank charts and no horizontal page overflow.</figcaption></figure>
+<figure><img src="screenshots/sprint4-prometheus-targets.png" alt="Prometheus target page showing the exporter is up"><figcaption>Figure 13. Prometheus target page confirming that the exporter is UP.</figcaption></figure>
+<figure><img src="screenshots/sprint4-grafana.png" alt="Provisioned Grafana container-security dashboard"><figcaption>Figure 14. Provisioned Grafana dashboard. Time-series history begins when Prometheus starts scraping the exporter.</figcaption></figure>
 <p>Browser verification is archived in <a href="screenshots/sprint4-browser-check.json">the original browser-check JSON</a>. Checks cover 1440x1080 and 390x844, API/UI totals, filters, empty and invalid-date states, scan drilldown, deep-linked exception audit, nonblank canvas pixels and no JavaScript errors.</p>
 </section>
 
@@ -210,7 +216,7 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Expired rule</td><td>10 active; 0 suppressed; 2 HIGH blocking</td><td>1</td><td><a href="evidence/sprint5/expired.json">expired.json</a></td></tr>
 <tr><td>Missing configured exception file</td><td>No scan performed</td><td>2</td><td>Deterministic tests and Sprint 5 execution record</td></tr>
 </tbody></table>
-<figure><img src="screenshots/sprint5-exception-audit.png" alt="Actual scan detail showing two approved HIGH findings, justification and expiry"><figcaption>Figure 11. Genuine exception audit capture. The dialog describes the approved historical observation; a later blocked inventory may remain visible behind it.</figcaption></figure>
+<figure><img src="screenshots/sprint5-exception-audit.png" alt="Scan detail showing two approved HIGH findings, justification and expiry"><figcaption>Figure 15. Exception audit for the approved historical scan: two HIGH findings with recorded justification and expiry. The background inventory reflects a later observation.</figcaption></figure>
 <h3>Fresh Rescan Lineage</h3>
 <p>Baseline <code>fa356ec8-553d-4769-bb81-20aeb03b599b</code> at <code>2026-10-29T13:57:51.161781Z</code> was followed by a real new Trivy scan <code>3531bf6a-0b7e-491d-aebb-b4d881adb621</code> at <code>2026-10-29T13:57:53.922734Z</code>. Its <code>rescan_of</code> points to the baseline. Both were blocked; no remediation was invented. The artifacts are linked in the evidence register.</p>
 <h3>Reliability Controls</h3>
@@ -221,22 +227,22 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <section id="verification"><h2>12. Verification Matrix</h2>
 <table><thead><tr><th>Verification</th><th>Evidence / observed result</th><th>Status</th></tr></thead><tbody>
 <tr><td>Integrated tests</td><td>77 deterministic tests; archived JUnit: 0 failures, 0 errors</td><td class="status">Verified</td></tr>
-<tr><td>Current final-report verification run</td><td><a href="evidence/final/junit.xml">Fresh JUnit</a> and <a href="evidence/final/test-output.txt">original test output</a></td><td class="status">Evidence attached</td></tr>
+<tr><td>Local integrated test run</td><td><a href="evidence/final/junit.xml">JUnit results</a> and <a href="evidence/final/test-output.txt">original test output</a></td><td class="status">Evidence attached</td></tr>
 <tr><td>Current main CI</td><td>Run #31 / 399d1af; success; scan/tests/reports/upload completed</td><td class="status">Verified</td></tr>
 <tr><td>Clean and vulnerable scan paths</td><td>Original final-version core log/artifacts plus historical real CI pass/block captures</td><td class="status">Verified</td></tr>
 <tr><td>Report integrity</td><td>Original JSON/HTML/PDF manifests match archived bytes, including clean Git checkout verification</td><td class="status">Verified</td></tr>
 <tr><td>Slack transport</td><td>Jenkins HIGH/CRITICAL and daily/weekly delivery logs</td><td class="status">Verified on Jenkins</td></tr>
-<tr><td>GitHub Slack</td><td>Repository secret absent; notification step skipped</td><td>Owner setup pending</td></tr>
+<tr><td>GitHub Slack</td><td>Repository secret absent; notification step skipped</td><td>Configuration pending</td></tr>
 <tr><td>Historical UI and monitoring</td><td>Real screenshots, browser-check JSON and observed exporter/Grafana health</td><td class="status">Verified at capture</td></tr>
 <tr><td>Approved and expired exceptions</td><td>Original active/suppressed artifacts and gate exits 0/1</td><td class="status">Verified</td></tr>
 <tr><td>Rescan lineage</td><td>New UUID/time and rescan_of; actual new scan invocation</td><td class="status">Verified</td></tr>
 </tbody></table>
-<p>Milestone test counts changed as scope grew: Sprint 2 had 16 tests, Sprint 3 had 28, isolated Sprint 4 had 35 and the integrated final suite has 77. These are separate historical states, not contradictory totals. Local captured browser history currently contains eight genuine observations, not a claim of large-scale production benchmarking.</p>
+<p>Milestone test counts increased as the project grew: Sprint 2 had 16 tests, Sprint 3 had 28, isolated Sprint 4 had 35 and the integrated final suite has 77. Dashboard verification used eight stored scan observations; large-scale production benchmarking is outside the evaluation scope.</p>
 </section>
 
 <section id="security"><h2>13. Security, Limitations and Outstanding Actions</h2>
 <ul>
-<li>Webhooks belong only in secret stores. The previously exposed webhook must be rotated by the account owner; its value is not reproduced here.</li>
+<li>Webhooks are stored in CI secret stores. Rotation of the previously exposed webhook remains a required security action.</li>
 <li>GitHub and Jenkins secret stores are separate. GitHub Slack delivery remains unverified until its repository secret is entered and delivery is rerun.</li>
 <li>Channel-side Slack screenshots remain unavailable. A delivery-success log proves transport acceptance, not independent visual receipt.</li>
 <li>Allowlist changes need human review and branch controls. The code does not establish an approver identity or enforce organization governance by itself.</li>
@@ -265,7 +271,7 @@ $artifacts = @(Get-ChildItem scan-results -Filter '*-????????.json' | ForEach-Ob
 python -m reporters.cli @artifacts --formats json,html,pdf --output-dir reports
 python -m dashboard.cli @artifacts --metrics-file reports/scan-metrics.prom
 python -m dashboard.app --port 5050</pre>
-<p>Open the local dashboard at http://127.0.0.1:5050. To run the provisioned exporter/Prometheus/Grafana stack, set a private <code>GRAFANA_ADMIN_PASSWORD</code> directly in the terminal and run <code>docker compose -f dashboard/compose.yaml up -d --build</code>. Never paste the password or webhook into documentation or chat. Do not run <code>down -v</code> unless deleting monitoring history is intended.</p>
+<p>Open the local dashboard at http://127.0.0.1:5050. To run the provisioned exporter/Prometheus/Grafana stack, set <code>GRAFANA_ADMIN_PASSWORD</code> privately in the terminal and run <code>docker compose -f dashboard/compose.yaml up -d --build</code>. Credentials must not be committed to the repository. Avoid <code>down -v</code> unless deletion of monitoring history is intended.</p>
 <p>CI evidence can be downloaded and imported using the same CLI. Rescan an original normalized artifact with <code>python -m scanner.trivy_scanner --rescan-artifact previous.json --refresh-db --output-dir scan-results/rescan</code>. Preserve the previous file and import both observations for historical comparisons. Full operational detail is in the <a href="../README.md">README</a>.</p>
 </section>
 
@@ -278,7 +284,7 @@ python -m dashboard.app --port 5050</pre>
 <tr><td>Risk approval could silently hide findings</td><td>Mandatory reason/expiry, exact scope and separate suppression audit; no default approvals.</td></tr>
 <tr><td>Different CI agent environments</td><td>Use shared Python logic, pinned Trivy and bootstrap pipelines; keep provider-specific orchestration separate.</td></tr>
 <tr><td>Original diagram mixed roadmap and implementation</td><td>Replace it with deployment boundaries, persisted stores and labelled interfaces; retain old image as historical overview.</td></tr>
-<tr><td>Evidence presentation could be mistaken for execution</td><td>Exclude reconstructed terminal panels from primary proof and provide original files, real captures and provenance.</td></tr>
+<tr><td>Preserving useful verification evidence</td><td>Retain original scanner outputs, JUnit results, CI records and browser captures alongside the report.</td></tr>
 </tbody></table>
 </section>
 
@@ -298,8 +304,9 @@ python -m dashboard.app --port 5050</pre>
 <tr><td>E12</td><a href="evidence/sprint5/baseline.json">Baseline</a> / <a href="evidence/sprint5/rescan.json">rescan</a></td><td>Original observations with fresh UUID/time and linked lineage</td></tr>
 <tr><td>E13</td><a href="evidence/sprint5/junit.xml">Milestone JUnit</a> / <a href="evidence/final/junit.xml">final-verification JUnit</a> / <a href="evidence/final/test-output.txt">test output</a></td><td>Machine-readable deterministic test evidence; distinct execution times</td></tr>
 <tr><td>E14</td><a href="deployment-architecture.svg">Deployment architecture</a></td><td>Technical documentation, not an execution screenshot</td></tr>
+<tr><td>E15</td><a href="evidence/final/screenshot-capture.json">Additional capture records</a></td><td>Sources and preparation records for the log view, rendered report, main-run capture and whitespace-trimmed Jenkins screenshot</td></tr>
 </tbody></table>
-<p>Relative links resolve inside the repository after cloning. HTML files are rendered locally; GitHub normally displays their source. Jenkins URLs may require academic credentials. Report PDFs embed the figures, while original machine-readable evidence remains in the adjacent repository paths.</p>
+<p>Relative links resolve inside the repository after cloning. HTML files are rendered locally; GitHub normally displays their source. Jenkins URLs may require academic credentials. Report PDFs embed the figures, while original machine-readable evidence remains in the adjacent repository paths. Older terminal-style presentation panels in the milestone appendices are not used as execution proof; this report uses original logs and browser captures.</p>
 </section>
 
 <section id="appendices"><h2>17. Milestone Appendices</h2>
@@ -315,8 +322,8 @@ python -m dashboard.app --port 5050</pre>
 </section>
 
 <section id="conclusion"><h2>18. Conclusion</h2>
-<p>The delivered system covers the requested path from first image scan to repeatable CI enforcement, consistent report evidence, real Jenkins notification delivery, persistent history, monitoring and governed vulnerability exceptions. Shared code paths, explicit failure semantics and retained original artifacts make the result inspectable rather than dependent on screenshots alone.</p>
-<p>The implementation and evidence support completion of Sprints 1-5. Production deployment, remaining account-secret/rotation tasks and channel-side visual proof remain explicit boundaries. No reconstructed panel, skipped Slack step, manually triggered schedule or accepted exception is represented as something it does not prove.</p>
+<p>Through this project, I integrated container image scanning with repeatable CI security gates, consistent reports, Jenkins notifications, persistent scan history, monitoring and governed vulnerability exceptions. The five sprints developed a basic scan workflow into a tested system with explicit failure handling and reviewable evidence.</p>
+<p>The results demonstrate the implemented Sprint 1-5 scope. Remaining notification setup and verification limits are listed in Section 13. Further work includes production hosting, stronger supply-chain controls and automated collection of CI artifacts.</p>
 </section>
 <footer>Tabrez Ajaz | Container Image Vulnerability Scanner with Reporting | Final consolidated report, 30 October 2026 | Source baseline 399d1af</footer>
 </main></body></html>

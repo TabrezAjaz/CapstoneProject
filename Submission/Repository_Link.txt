@@ -1,0 +1,16 @@
+CAPSTONE PROJECT SUBMISSION
+
+Project: Container Image Vulnerability Scanner with Reporting
+Submitted by: Tabrez Ajaz
+GitHub account: TabrezAjaz
+
+Repository URL:
+https://github.com/TabrezAjaz/CapstoneProject
+
+Branch: main
+
+The repository contains the Sprint 1-5 source code, CI workflows, tests,
+deployment configuration, documentation and original verification evidence.
+
+Final report:
+https://github.com/TabrezAjaz/CapstoneProject/blob/main/Submission/Final_Project_Report.pdf

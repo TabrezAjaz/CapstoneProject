@@ -9,7 +9,10 @@ snapshots. Trivy is pinned to **0.74.0**, the wrapper is **0.5.0**, and the inte
 **Final submission report:** [Complete HTML report](docs/Final_Project_Report.html) |
 [Printable PDF](docs/Final_Project_Report.pdf). The report consolidates Sprints 1-5, the final
 architecture, genuine screenshots, original scan/test/CI evidence, reproduction steps and
-explicit outstanding account-owner actions.
+documented limitations and remaining notification setup.
+
+**Vlearn submission package:** [Submission folder](Submission/README.md), including the
+repository-link text file, final PDF and standalone HTML report.
 
 ## Delivery Status
 

@@ -1,0 +1,28 @@
+{
+  "captures": [
+    {
+      "image": "docs/screenshots/final-core-verification.png",
+      "source": "docs/evidence/final/core-verification.txt",
+      "captured_at": "2026-10-30T09:41:45.949861+00:00",
+      "method": "Chrome browser view of original saved output; larger wrapped font for readability; source text unchanged"
+    },
+    {
+      "image": "docs/screenshots/final-generated-report.png",
+      "source": "docs/evidence/sprint5/vulnerability-run-63eae946.html",
+      "captured_at": "2026-10-30T09:37:44.667849+00:00",
+      "method": "Unmodified Chrome browser rendering of original saved execution output/report"
+    },
+    {
+      "image": "docs/screenshots/final-github-main.png",
+      "source": "https://github.com/TabrezAjaz/CapstoneProject/actions/runs/40951355890",
+      "captured_at": "2026-10-30T09:37:47.659670+00:00",
+      "method": "Unmodified public GitHub Actions run page in Chrome"
+    },
+    {
+      "image": "docs/screenshots/final-jenkins-clean.png",
+      "source": "docs/screenshots/sprint2-jenkins-passed-run.png",
+      "prepared_at": "2026-10-30T09:41:45.949887+00:00",
+      "method": "Original browser screenshot cropped only to remove unused white right/bottom margins; original retained"
+    }
+  ]
+}
