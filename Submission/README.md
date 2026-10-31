@@ -13,7 +13,8 @@ requirement. The project code is published on the repository's `main` branch.
 Upload [Final_Project_Report.pdf](Final_Project_Report.pdf) as supporting
 documentation when the portal permits an additional attachment. It contains
 the Sprint 1-5 implementation, deployment architecture, verification results,
-15 figures, evidence references, reproduction steps and limitations.
+19 figures, including actual Slack-channel alerts and summaries, evidence references,
+reproduction steps and limitations.
 
 [Final_Project_Report.html](Final_Project_Report.html) is an optional browser
 edition with embedded images. It does not need an adjacent image folder.
@@ -27,10 +28,11 @@ generated reports, Jenkins notification delivery, summary jobs, dashboard,
 Prometheus, Grafana, exception approval/expiry and rescan lineage. The final
 integrated test run has 77 passing tests.
 
-GitHub Slack-secret configuration, webhook rotation and Slack-channel
-screenshots remain outstanding. Timer-triggered execution and live registry
-outage recovery are not claimed. These limits are retained in Section 13
-of the report rather than represented as completed verification.
+Slack-channel receipt is verified by the HIGH/CRITICAL and daily/weekly
+screenshots captured on 31 October 2026. Current GitHub secret configuration
+and webhook rotation require separate confirmation. Timer-triggered execution
+and live registry outage recovery are not claimed. These limits are retained
+in Section 13 of the report rather than represented as completed verification.
 
 Do not upload credentials, virtual environments, local databases or unrelated
 workspace files. The repository-link file is the required portal deliverable;

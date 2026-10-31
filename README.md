@@ -24,10 +24,12 @@ repository-link text file, final PDF and standalone HTML report.
 | 4 | SQLite history, Flask/Chart.js UI, Prometheus exporter and Grafana | Browser checks, healthy scrape target, 35 tests on the isolated milestone |
 | 5 | Scoped expiring exceptions, suppression audit, fresh rescans and bounded retries | Real approval/expiry demonstrations; 77 integrated tests |
 
-**Remaining external setup:** GitHub needs its own `SLACK_WEBHOOK_URL` secret; the Jenkins credential
-does not populate it. Without that secret, GitHub Slack steps are skipped, not delivered.
-Rotation of the previously exposed webhook and channel-side screenshots remain account-owner
-actions. The dashboards are a loopback-only local demonstration, not a public production service.
+**Notification verification:** GitHub and Jenkins use separate `SLACK_WEBHOOK_URL` credentials.
+Baseline GitHub main run #31 skipped Slack; current GitHub secret configuration requires separate
+verification and cannot be inferred solely from the channel screenshots.
+Slack channel screenshots now verify HIGH/CRITICAL alerts and daily/weekly summaries in the final
+report. Rotation of the previously exposed webhook requires separate confirmation. The dashboards
+are a loopback-only local demonstration, not a public production service.
 No Teams/email notifier, automatic registry-digest watcher, or automatic CI-to-laptop importer is
 implemented.
 

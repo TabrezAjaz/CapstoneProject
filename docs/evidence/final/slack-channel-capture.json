@@ -1,0 +1,103 @@
+{
+  "capture_date_utc": "2026-10-31",
+  "workspace": "Capstone",
+  "channel": "container-security",
+  "source_url": "https://app.slack.com/client/T0CD1RDL7SS/C0CD3LRD466",
+  "method": "Authenticated Slack viewport screenshots cropped to the original message bounding boxes using the observed device-pixel ratio; message content unchanged; no messages sent or integration settings changed",
+  "verification_boundary": "Channel receipt is verified. Current CI secret configuration, credential rotation and cron trigger provenance are not established by these screenshots alone.",
+  "messages": [
+    {
+      "kind": "high_alert",
+      "screenshot": "docs/screenshots/final-slack-high.png",
+      "report_id": "4db7171c-2a6a-4351-ae0f-ebee2bcdda07",
+      "generated_at": "2026-10-29T06:37:56.332958Z",
+      "captured_at": "2026-10-31T05:10:43.275Z",
+      "image_count": 1,
+      "critical": 0,
+      "high": 2,
+      "policy_state": "BLOCKED",
+      "pixel_crop_bounds": [
+        539,
+        684,
+        1832,
+        960
+      ],
+      "screenshot_dimensions": [
+        1293,
+        276
+      ],
+      "sha256": "fbec7cca29e8f2991f7d86c806b57788743dcd58a264091af7658d9f155ea1a2"
+    },
+    {
+      "kind": "critical_alert",
+      "screenshot": "docs/screenshots/final-slack-critical.png",
+      "report_id": "4dfa0116-b8ab-43ec-a49e-4b9f50f63c8c",
+      "generated_at": "2026-10-29T06:38:43.362582Z",
+      "captured_at": "2026-10-31T05:10:43.709Z",
+      "image_count": 1,
+      "critical": 228,
+      "high": 2188,
+      "policy_state": "BLOCKED",
+      "pixel_crop_bounds": [
+        539,
+        420,
+        1832,
+        695
+      ],
+      "screenshot_dimensions": [
+        1293,
+        275
+      ],
+      "sha256": "5e099a3f3f901af4c2efd23be3e234e647d1636aa5f6d8244fdc5c35dd56c784"
+    },
+    {
+      "kind": "daily_summary",
+      "screenshot": "docs/screenshots/final-slack-daily.png",
+      "report_id": "19a39e09-f99b-483a-889d-faa0f185e394",
+      "generated_at": "2026-10-31T02:33:53.661835Z",
+      "image_count": 4,
+      "critical": 227,
+      "high": 2302,
+      "policy_state": "BLOCKED",
+      "captured_at": "2026-10-31T05:10:44.707Z",
+      "pixel_crop_bounds": [
+        539,
+        563,
+        1832,
+        927
+      ],
+      "screenshot_dimensions": [
+        1293,
+        364
+      ],
+      "sha256": "e55aacb17319f7302b49c014b15c53be42f6bf930ac42f904e4831fc908562e2"
+    },
+    {
+      "kind": "weekly_summary",
+      "screenshot": "docs/screenshots/final-slack-weekly.png",
+      "report_id": "e7be4999-0548-4a5f-a59f-7b33d68fb538",
+      "generated_at": "2026-10-29T18:27:40.350276Z",
+      "captured_at": "2026-10-31T05:10:44.186Z",
+      "image_count": 4,
+      "critical": 229,
+      "high": 2292,
+      "policy_state": "BLOCKED",
+      "pixel_crop_bounds": [
+        539,
+        376,
+        1832,
+        739
+      ],
+      "screenshot_dimensions": [
+        1293,
+        363
+      ],
+      "sha256": "3a242849643c03bdfa7c896b674b76b6709b7b2a99a52cd5c69cada07a0b5f1f"
+    }
+  ],
+  "viewport_css": {
+    "width": 1375,
+    "height": 922,
+    "device_pixel_ratio": 1.3333333730697632
+  }
+}

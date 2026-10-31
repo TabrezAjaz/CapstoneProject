@@ -49,13 +49,13 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <h1>Container Image Vulnerability Scanner with Reporting</h1>
 <p>A policy-driven container scanning system with auditable reports, CI gates, Slack notifications, governed exceptions and persistent vulnerability monitoring.</p>
 <div class="meta">
-<p><strong>Submitted by:</strong> Tabrez Ajaz</p><p><strong>Report date:</strong> 30 October 2026</p>
+<p><strong>Submitted by:</strong> Tabrez Ajaz</p><p><strong>Report date:</strong> 31 October 2026</p>
 <p><strong>GitHub account:</strong> TabrezAjaz</p><p><strong>Implementation branch:</strong> main</p>
 <p><strong>Scanner engine:</strong> Trivy 0.74.0</p><p><strong>Python wrapper:</strong> 0.5.0</p>
 <p><strong>Implementation baseline:</strong> 399d1af</p><p><strong>Integrated deterministic suite:</strong> 77 tests</p>
 </div>
 <p><a href="https://github.com/TabrezAjaz/CapstoneProject">https://github.com/TabrezAjaz/CapstoneProject</a> | <a href="../README.md">Operating documentation</a> | <a href="Final_Project_Report.pdf">Printable PDF edition</a></p>
-<div class="notice"><strong>Project status:</strong> The Sprint 1-5 implementation is integrated on main, with automated tests, CI security gates, reporting and local monitoring validated. Jenkins Slack delivery is verified. Remaining notification configuration and verification limits are listed in Section 13.</div>
+<div class="notice"><strong>Project status:</strong> The Sprint 1-5 implementation is integrated on main, with automated tests, CI security gates, reporting and local monitoring validated. Jenkins delivery logs and Slack channel screenshots verify alerts and summaries. Remaining credential-configuration checks and verification limits are listed in Section 13.</div>
 <p class="subtle">This report documents my project objectives, implementation, testing and results across five sprints. Screenshots and original execution artifacts accompany the results. Vulnerability counts depend on the scan date, image and advisory database.</p>
 </header>
 
@@ -169,7 +169,7 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Daily #16 / Weekly #4</td><td>SUCCESS; real Slack transport delivery and archived summary evidence</td></tr>
 <tr><td>Daily #17 / Weekly #5</td><td>SUCCESS with saved defaults, correct cadence and delivery in one attempt</td></tr>
 </tbody></table>
-<p>These are verified delivery logs, not screenshots proving channel-side receipt. Original controller links: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/console">HIGH #4</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/console">CRITICAL #5</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/17/console">Daily #17</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/5/console">Weekly #5</a>. Academic Jenkins may require login and is subject to retention.</p>
+<p>I also verified the received messages in the Capstone workspace's <code>#container-security</code> channel on 31 October 2026. Figures 16-19 show the actual HIGH/CRITICAL alerts and daily/weekly summaries, with report IDs and generation timestamps. Original controller links: <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/4/console">HIGH #4</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3/5/console">CRITICAL #5</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Daily/17/console">Daily #17</a>, <a href="https://jenkinsacademics.herovired.com/job/TabrezAjaz-CapstoneProject-Sprint3-Summary-Weekly/5/console">Weekly #5</a>. Academic Jenkins may require login and is subject to retention.</p>
 <p>The following console records, retained in the Sprint 3 milestone report, show successful Slack transport delivery for alerts and scheduled-summary jobs.</p>
 <table><thead><tr><th>Execution</th><th>Original delivery line</th></tr></thead><tbody>
 <tr><td>HIGH main #4</td><td><code>[2026-10-29T06:37:57.366Z] Slack notification delivered in 1 attempt(s)</code></td></tr>
@@ -232,7 +232,8 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <tr><td>Clean and vulnerable scan paths</td><td>Original final-version core log/artifacts plus historical real CI pass/block captures</td><td class="status">Verified</td></tr>
 <tr><td>Report integrity</td><td>Original JSON/HTML/PDF manifests match archived bytes, including clean Git checkout verification</td><td class="status">Verified</td></tr>
 <tr><td>Slack transport</td><td>Jenkins HIGH/CRITICAL and daily/weekly delivery logs</td><td class="status">Verified on Jenkins</td></tr>
-<tr><td>GitHub Slack</td><td>Repository secret absent; notification step skipped</td><td>Configuration pending</td></tr>
+<tr><td>Slack channel receipt</td><td>Authenticated channel screenshots of HIGH/CRITICAL alerts and daily/weekly summaries; original IDs and timestamps visible</td><td class="status">Verified on 31 October</td></tr>
+<tr><td>GitHub Slack</td><td>Baseline run #31 skipped notification; current repository-secret configuration was not revalidated by the channel capture</td><td>Separate configuration check</td></tr>
 <tr><td>Historical UI and monitoring</td><td>Real screenshots, browser-check JSON and observed exporter/Grafana health</td><td class="status">Verified at capture</td></tr>
 <tr><td>Approved and expired exceptions</td><td>Original active/suppressed artifacts and gate exits 0/1</td><td class="status">Verified</td></tr>
 <tr><td>Rescan lineage</td><td>New UUID/time and rescan_of; actual new scan invocation</td><td class="status">Verified</td></tr>
@@ -242,9 +243,9 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 
 <section id="security"><h2>13. Security, Limitations and Outstanding Actions</h2>
 <ul>
-<li>Webhooks are stored in CI secret stores. Rotation of the previously exposed webhook remains a required security action.</li>
-<li>GitHub and Jenkins secret stores are separate. GitHub Slack delivery remains unverified until its repository secret is entered and delivery is rerun.</li>
-<li>Channel-side Slack screenshots remain unavailable. A delivery-success log proves transport acceptance, not independent visual receipt.</li>
+<li>Webhooks are stored in CI secret stores. Rotation of the previously exposed webhook must be confirmed separately; channel screenshots do not verify credential rotation.</li>
+<li>GitHub and Jenkins secret stores are separate. Baseline GitHub run #31 skipped Slack. Channel receipt alone does not establish the current GitHub secret configuration or the originating CI provider for every message.</li>
+<li>Slack channel receipt is verified by Figures 16-19. Daily and weekly message labels demonstrate summary delivery; they do not by themselves prove that a particular platform cron triggered the source run.</li>
 <li>Allowlist changes need human review and branch controls. The code does not establish an approver identity or enforce organization governance by itself.</li>
 <li>Loopback binding, read-only API, nonroot dashboard container and restrictive web headers reduce exposure. Flask development hosting and anonymous Grafana Viewer are not a public production security model.</li>
 <li>Monitoring history requires explicit artifact download/import. No central CI collector, remote write API, Node Exporter or Pushgateway is deployed.</li>
@@ -305,8 +306,15 @@ python -m dashboard.app --port 5050</pre>
 <tr><td>E13</td><a href="evidence/sprint5/junit.xml">Milestone JUnit</a> / <a href="evidence/final/junit.xml">final-verification JUnit</a> / <a href="evidence/final/test-output.txt">test output</a></td><td>Machine-readable deterministic test evidence; distinct execution times</td></tr>
 <tr><td>E14</td><a href="deployment-architecture.svg">Deployment architecture</a></td><td>Technical documentation, not an execution screenshot</td></tr>
 <tr><td>E15</td><a href="evidence/final/screenshot-capture.json">Additional capture records</a></td><td>Sources and preparation records for the log view, rendered report, main-run capture and whitespace-trimmed Jenkins screenshot</td></tr>
+<tr><td>E16</td><a href="evidence/final/slack-channel-capture.json">Slack channel capture records</a></td><td>Authenticated message screenshots, report IDs, generation times and observed severity counts</td></tr>
 </tbody></table>
 <p>Relative links resolve inside the repository after cloning. HTML files are rendered locally; GitHub normally displays their source. Jenkins URLs may require academic credentials. Report PDFs embed the figures, while original machine-readable evidence remains in the adjacent repository paths. Older terminal-style presentation panels in the milestone appendices are not used as execution proof; this report uses original logs and browser captures.</p>
+<h3>Slack Channel Evidence</h3>
+<p>The following screenshots were captured from the authenticated Capstone <code>#container-security</code> channel on 31 October 2026. They preserve the message content shown by Slack; no message was recreated or posted for the capture. The current daily summary has different counts from the 29 October summaries because scan results change over time.</p>
+<figure><img src="screenshots/final-slack-high.png" alt="Received Slack HIGH alert for alpine 3.19 with two HIGH findings and the original report ID"><figcaption>Figure 16. Received HIGH alert: alpine:3.19, 0 CRITICAL and 2 HIGH; report 4db7171c-2a6a-4351-ae0f-ebee2bcdda07, generated 29 October at 06:37:56 UTC.</figcaption></figure>
+<figure><img src="screenshots/final-slack-critical.png" alt="Received Slack CRITICAL alert for node 18 showing 228 CRITICAL and 2188 HIGH findings"><figcaption>Figure 17. Received CRITICAL alert: node:18, 228 CRITICAL and 2,188 HIGH; report 4dfa0116-b8ab-43ec-a49e-4b9f50f63c8c, generated 29 October at 06:38:43 UTC.</figcaption></figure>
+<figure><img src="screenshots/final-slack-daily.png" alt="Received daily Slack portfolio summary for four images generated on 31 October 2026"><figcaption>Figure 18. Daily summary received on 31 October: four images, 227 CRITICAL and 2,302 HIGH; report 19a39e09-f99b-483a-889d-faa0f185e394, generated at 02:33:53 UTC.</figcaption></figure>
+<figure><img src="screenshots/final-slack-weekly.png" alt="Received weekly Slack portfolio summary for four images with report ID and generation timestamp"><figcaption>Figure 19. Weekly summary: four images, 229 CRITICAL and 2,292 HIGH; report e7be4999-0548-4a5f-a59f-7b33d68fb538, generated 29 October at 18:27:40 UTC.</figcaption></figure>
 </section>
 
 <section id="appendices"><h2>17. Milestone Appendices</h2>
@@ -325,5 +333,5 @@ python -m dashboard.app --port 5050</pre>
 <p>Through this project, I integrated container image scanning with repeatable CI security gates, consistent reports, Jenkins notifications, persistent scan history, monitoring and governed vulnerability exceptions. The five sprints developed a basic scan workflow into a tested system with explicit failure handling and reviewable evidence.</p>
 <p>The results demonstrate the implemented Sprint 1-5 scope. Remaining notification setup and verification limits are listed in Section 13. Further work includes production hosting, stronger supply-chain controls and automated collection of CI artifacts.</p>
 </section>
-<footer>Tabrez Ajaz | Container Image Vulnerability Scanner with Reporting | Final consolidated report, 30 October 2026 | Source baseline 399d1af</footer>
+<footer>Tabrez Ajaz | Container Image Vulnerability Scanner with Reporting | Final consolidated report, updated 31 October 2026 | Source baseline 399d1af</footer>
 </main></body></html>
