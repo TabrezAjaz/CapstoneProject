@@ -1,0 +1,73 @@
+{
+  "method": "Original authenticated Slack viewport screenshots cropped to observed message bounds, scaled by observed devicePixelRatio, with 4px padding. No messages recreated or edited. Job log delivery line observed on the linked original GitHub job page.",
+  "captures": [
+    {
+      "kind": "high",
+      "run_id": 41174455287,
+      "run_number": 37,
+      "job_id": 124459007641,
+      "message_ts": "1793426122.901969",
+      "report_id": "cf7d6d79-57b7-43b3-86a5-8bda9c0d289b",
+      "generated_at": "2026-10-31T05:55:22.524110Z",
+      "captured_at": "2026-10-31T06:02:18.764Z",
+      "critical": 0,
+      "high": 2,
+      "image_count": 1,
+      "box": {
+        "x": 407.7421875,
+        "y": 317.73046875,
+        "width": 963.01171875,
+        "height": 199.8984375
+      },
+      "device_pixel_ratio": 1.3333333730697632,
+      "crop_pixels": [
+        539,
+        419,
+        1832,
+        695
+      ],
+      "screenshot": "docs/screenshots/final-github-slack-high.png",
+      "sha256": "fe507b197fda14faf87fdb17ed370a72585ade941fd266f899770756330b43fa",
+      "channel_url": "https://app.slack.com/client/T0CD1RDL7SS/C0CD3LRD466",
+      "job_url": "https://github.com/TabrezAjaz/CapstoneProject/actions/runs/41174455287/job/124459007641",
+      "observed_job_log": "Slack notification delivered in 1 attempt(s)",
+      "trigger": "workflow_dispatch",
+      "head_sha": "5a67dfda360835e1b1c37716e668e2cd4f6997ed",
+      "viewport_sha256": "2eb066d05c063f379ff2db43069b2b46f9333c34015116b3a6d3553ba71d6649"
+    },
+    {
+      "kind": "daily",
+      "run_id": 41174502332,
+      "run_number": 3,
+      "job_id": 124459141378,
+      "message_ts": "1793426187.371919",
+      "report_id": "12ed8814-c41a-4474-bcf8-1c3ad1cb801f",
+      "generated_at": "2026-10-31T05:56:18.642356Z",
+      "captured_at": "2026-10-31T06:01:01.376Z",
+      "critical": 227,
+      "high": 2302,
+      "image_count": 4,
+      "box": {
+        "x": 407.7421875,
+        "y": 447.87890625,
+        "width": 963.01171875,
+        "height": 243.890625
+      },
+      "device_pixel_ratio": 1.3333333730697632,
+      "crop_pixels": [
+        539,
+        593,
+        1832,
+        927
+      ],
+      "screenshot": "docs/screenshots/final-github-slack-daily.png",
+      "sha256": "f510f1be1650b87fab6aa23d71fc113c5a470cc89cd5b8af4d998aef558412fa",
+      "channel_url": "https://app.slack.com/client/T0CD1RDL7SS/C0CD3LRD466",
+      "job_url": "https://github.com/TabrezAjaz/CapstoneProject/actions/runs/41174502332/job/124459141378",
+      "observed_job_log": "Slack notification delivered in 1 attempt(s)",
+      "trigger": "workflow_dispatch",
+      "head_sha": "5a67dfda360835e1b1c37716e668e2cd4f6997ed",
+      "viewport_sha256": "0dbee59d62e3eeea9290f0a2ab2e538c53348312f44b553230548de6c69b411c"
+    }
+  ]
+}

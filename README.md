@@ -9,7 +9,7 @@ snapshots. Trivy is pinned to **0.74.0**, the wrapper is **0.5.0**, and the inte
 **Final submission report:** [Complete HTML report](docs/Final_Project_Report.html) |
 [Printable PDF](docs/Final_Project_Report.pdf). The report consolidates Sprints 1-5, the final
 architecture, genuine screenshots, original scan/test/CI evidence, reproduction steps and
-documented limitations and remaining notification setup.
+documented limitations and notification verification.
 
 **Vlearn submission package:** [Submission folder](Submission/README.md), including the
 repository-link text file, final PDF and standalone HTML report.
@@ -25,10 +25,13 @@ repository-link text file, final PDF and standalone HTML report.
 | 5 | Scoped expiring exceptions, suppression audit, fresh rescans and bounded retries | Real approval/expiry demonstrations; 77 integrated tests |
 
 **Notification verification:** GitHub and Jenkins use separate `SLACK_WEBHOOK_URL` credentials.
-Final main run #34 and actual scheduled run #2 passed but skipped Slack. The final repository
-settings check showed no repository secrets, so GitHub notification setup remains pending.
-Slack channel screenshots now verify HIGH/CRITICAL alerts and daily/weekly summaries in the final
-report. Rotation of the previously exposed webhook requires separate confirmation. The dashboards
+Historical main run #34 and actual scheduled run #2 passed but skipped Slack before the GitHub
+secret was configured. After it was added, [HIGH run #37](https://github.com/TabrezAjaz/CapstoneProject/actions/runs/41174455287)
+delivered its alert in one attempt, uploaded evidence and restored the expected policy failure.
+[Daily summary #3](https://github.com/TabrezAjaz/CapstoneProject/actions/runs/41174502332) succeeded
+and delivered in one attempt. Both were manually dispatched; the earlier #2 remains the actual
+scheduled-trigger evidence. Original API records and fresh channel receipts are in the final
+report. Rotation of the exposed webhook remains a separate security action. The dashboards
 are a loopback-only local demonstration, not a public production service.
 No Teams/email notifier, automatic registry-digest watcher, or automatic CI-to-laptop importer is
 implemented.
