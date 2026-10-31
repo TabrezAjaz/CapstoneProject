@@ -3,6 +3,8 @@ CAPSTONE PROJECT SUBMISSION
 Project: Container Image Vulnerability Scanner with Reporting
 Submitted by: Tabrez Ajaz
 GitHub account: TabrezAjaz
+Email: tabrezajaz@hotmail.com
+Postgraduate Program in Multi Cloud Architecture & DevOps: Batch 16B
 
 Repository URL:
 https://github.com/TabrezAjaz/CapstoneProject
