@@ -25,8 +25,8 @@ repository-link text file, final PDF and standalone HTML report.
 | 5 | Scoped expiring exceptions, suppression audit, fresh rescans and bounded retries | Real approval/expiry demonstrations; 77 integrated tests |
 
 **Notification verification:** GitHub and Jenkins use separate `SLACK_WEBHOOK_URL` credentials.
-Baseline GitHub main run #31 skipped Slack; current GitHub secret configuration requires separate
-verification and cannot be inferred solely from the channel screenshots.
+Final main run #34 and actual scheduled run #2 passed but skipped Slack. The final repository
+settings check showed no repository secrets, so GitHub notification setup remains pending.
 Slack channel screenshots now verify HIGH/CRITICAL alerts and daily/weekly summaries in the final
 report. Rotation of the previously exposed webhook requires separate confirmation. The dashboards
 are a loopback-only local demonstration, not a public production service.

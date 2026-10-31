@@ -185,11 +185,11 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 
 <section id="scheduling"><h2>9. Scheduled Automation</h2>
 <table><thead><tr><th>Platform</th><th>Configured cadence</th><th>Validation boundary</th></tr></thead><tbody>
-<tr><td>GitHub Actions</td><td>Daily 02:23 UTC; Monday 03:41 UTC</td><td>Workflow present on main. Manual daily summary run #1 succeeded; its Slack step was skipped.</td></tr>
+<tr><td>GitHub Actions</td><td>Daily 02:23 UTC; Monday 03:41 UTC</td><td><a href="https://github.com/TabrezAjaz/CapstoneProject/actions/runs/41028487406">Scheduled run #2</a> completed successfully with the platform-recorded event type schedule. Earlier manual run #1 remains separate evidence.</td></tr>
 <tr><td>Jenkins daily job</td><td>H 2 * * * UTC</td><td>Saved trigger and default auto cadence/NOTIFY=true verified; manually triggered default build #17 succeeded.</td></tr>
 <tr><td>Jenkins weekly job</td><td>H 3 * * 1 UTC</td><td>Job name ending -Weekly selects weekly in auto mode; manually triggered default build #5 succeeded.</td></tr>
 </tbody></table>
-<p>Scheduled summaries refresh the database and rescan configured images. A policy block is a valid portfolio summary result; operational failures fail the summary job. A successful manual dispatch verifies the workflow and defaults, not that a cron event actually fired. GitHub schedules also depend on platform scheduling/availability.</p>
+<p>Scheduled summaries refresh the database and rescan configured images. A policy block is a valid portfolio summary result; operational failures fail the summary job. GitHub run #2 provides actual scheduled-trigger evidence, while the listed Jenkins default-parameter checks were manually triggered. Platform scheduling may delay execution beyond the configured cron time.</p>
 </section>
 
 <section id="monitoring"><h2>10. Sprint 4: Persistent History and Monitoring</h2>
@@ -228,12 +228,13 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <table><thead><tr><th>Verification</th><th>Evidence / observed result</th><th>Status</th></tr></thead><tbody>
 <tr><td>Integrated tests</td><td>77 deterministic tests; archived JUnit: 0 failures, 0 errors</td><td class="status">Verified</td></tr>
 <tr><td>Local integrated test run</td><td><a href="evidence/final/junit.xml">JUnit results</a> and <a href="evidence/final/test-output.txt">original test output</a></td><td class="status">Evidence attached</td></tr>
-<tr><td>Current main CI</td><td>Run #31 / 399d1af; success; scan/tests/reports/upload completed</td><td class="status">Verified</td></tr>
+<tr><td>Final main CI verification</td><td>Run #34 / 480ec2d; success; deterministic tests, real scan, reports and upload completed</td><td class="status">Verified on 31 October</td></tr>
 <tr><td>Clean and vulnerable scan paths</td><td>Original final-version core log/artifacts plus historical real CI pass/block captures</td><td class="status">Verified</td></tr>
 <tr><td>Report integrity</td><td>Original JSON/HTML/PDF manifests match archived bytes, including clean Git checkout verification</td><td class="status">Verified</td></tr>
 <tr><td>Slack transport</td><td>Jenkins HIGH/CRITICAL and daily/weekly delivery logs</td><td class="status">Verified on Jenkins</td></tr>
 <tr><td>Slack channel receipt</td><td>Authenticated channel screenshots of HIGH/CRITICAL alerts and daily/weekly summaries; original IDs and timestamps visible</td><td class="status">Verified on 31 October</td></tr>
-<tr><td>GitHub Slack</td><td>Baseline run #31 skipped notification; current repository-secret configuration was not revalidated by the channel capture</td><td>Separate configuration check</td></tr>
+<tr><td>GitHub Slack</td><td>Runs #34 and scheduled #2 skipped Slack; final repository settings check showed no repository secrets</td><td>Credential setup pending</td></tr>
+<tr><td>GitHub scheduled trigger</td><td>Summary run #2 completed successfully with event type schedule</td><td class="status">Verified</td></tr>
 <tr><td>Historical UI and monitoring</td><td>Real screenshots, browser-check JSON and observed exporter/Grafana health</td><td class="status">Verified at capture</td></tr>
 <tr><td>Approved and expired exceptions</td><td>Original active/suppressed artifacts and gate exits 0/1</td><td class="status">Verified</td></tr>
 <tr><td>Rescan lineage</td><td>New UUID/time and rescan_of; actual new scan invocation</td><td class="status">Verified</td></tr>
@@ -244,7 +245,7 @@ footer{margin-top:42px;padding-top:18px;border-top:1px solid #ccd8d1;font-size:1
 <section id="security"><h2>13. Security, Limitations and Outstanding Actions</h2>
 <ul>
 <li>Webhooks are stored in CI secret stores. Rotation of the previously exposed webhook must be confirmed separately; channel screenshots do not verify credential rotation.</li>
-<li>GitHub and Jenkins secret stores are separate. Baseline GitHub run #31 skipped Slack. Channel receipt alone does not establish the current GitHub secret configuration or the originating CI provider for every message.</li>
+<li>GitHub and Jenkins secret stores are separate. Final main run #34 and scheduled run #2 skipped Slack, and the final repository-settings check showed no repository secrets. GitHub delivery requires SLACK_WEBHOOK_URL to be saved privately and a fresh notification run verified. Jenkins transport and the captured Slack messages remain separate verified evidence.</li>
 <li>Slack channel receipt is verified by Figures 16-19. Daily and weekly message labels demonstrate summary delivery; they do not by themselves prove that a particular platform cron triggered the source run.</li>
 <li>Allowlist changes need human review and branch controls. The code does not establish an approver identity or enforce organization governance by itself.</li>
 <li>Loopback binding, read-only API, nonroot dashboard container and restrictive web headers reduce exposure. Flask development hosting and anonymous Grafana Viewer are not a public production security model.</li>
@@ -307,6 +308,7 @@ python -m dashboard.app --port 5050</pre>
 <tr><td>E14</td><a href="deployment-architecture.svg">Deployment architecture</a></td><td>Technical documentation, not an execution screenshot</td></tr>
 <tr><td>E15</td><a href="evidence/final/screenshot-capture.json">Additional capture records</a></td><td>Sources and preparation records for the log view, rendered report, main-run capture and whitespace-trimmed Jenkins screenshot</td></tr>
 <tr><td>E16</td><a href="evidence/final/slack-channel-capture.json">Slack channel capture records</a></td><td>Authenticated message screenshots, report IDs, generation times and observed severity counts</td></tr>
+<tr><td>E17</td><a href="evidence/final/current-main-run.json">Final main run</a> / <a href="evidence/final/current-main-jobs.json">steps</a> / <a href="evidence/final/scheduled-run.json">scheduled run</a> / <a href="evidence/final/scheduled-jobs.json">steps</a></td><td>Original public API responses: main #34 success, actual schedule event #2 success; Slack steps skipped</td></tr>
 </tbody></table>
 <p>Relative links resolve inside the repository after cloning. HTML files are rendered locally; GitHub normally displays their source. Jenkins URLs may require academic credentials. Report PDFs embed the figures, while original machine-readable evidence remains in the adjacent repository paths. Older terminal-style presentation panels in the milestone appendices are not used as execution proof; this report uses original logs and browser captures.</p>
 <h3>Slack Channel Evidence</h3>
@@ -315,6 +317,10 @@ python -m dashboard.app --port 5050</pre>
 <figure><img src="screenshots/final-slack-critical.png" alt="Received Slack CRITICAL alert for node 18 showing 228 CRITICAL and 2188 HIGH findings"><figcaption>Figure 17. Received CRITICAL alert: node:18, 228 CRITICAL and 2,188 HIGH; report 4dfa0116-b8ab-43ec-a49e-4b9f50f63c8c, generated 29 October at 06:38:43 UTC.</figcaption></figure>
 <figure><img src="screenshots/final-slack-daily.png" alt="Received daily Slack portfolio summary for four images generated on 31 October 2026"><figcaption>Figure 18. Daily summary received on 31 October: four images, 227 CRITICAL and 2,302 HIGH; report 19a39e09-f99b-483a-889d-faa0f185e394, generated at 02:33:53 UTC.</figcaption></figure>
 <figure><img src="screenshots/final-slack-weekly.png" alt="Received weekly Slack portfolio summary for four images with report ID and generation timestamp"><figcaption>Figure 19. Weekly summary: four images, 229 CRITICAL and 2,292 HIGH; report e7be4999-0548-4a5f-a59f-7b33d68fb538, generated 29 October at 18:27:40 UTC.</figcaption></figure>
+<h3>Final CI and Scheduled-Trigger Verification</h3>
+<p>I checked the final published main branch and the platform-recorded scheduled workflow. Main run #34 completed tests, scanning, reporting and evidence upload successfully. Summary run #2 has event type <code>schedule</code>, providing actual timer-trigger evidence. Their Slack steps were skipped, as shown by the original step records in E17.</p>
+<figure><img src="screenshots/final-github-main-verification.png" alt="Successful GitHub main run number 34 at commit 480ec2d"><figcaption>Figure 20. Final main CI verification: run #34, commit 480ec2d, SUCCESS with retained evidence.</figcaption></figure>
+<figure><img src="screenshots/final-github-scheduled.png" alt="Successful GitHub scheduled vulnerability summary run number 2"><figcaption>Figure 21. Successful scheduled summary run #2. The original GitHub API records event type schedule; Slack delivery was skipped.</figcaption></figure>
 </section>
 
 <section id="appendices"><h2>17. Milestone Appendices</h2>
